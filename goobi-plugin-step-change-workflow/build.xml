@@ -184,7 +184,9 @@
     	 ================================= -->
 
     <!-- Run all targets in appropiate order for clean compile-->
-    <target name="dist" depends="clean, createDirs, git.revision, jar.runnable" description="Creating everything for Jenkins." />
+    <target name="dist" depends="clean, createDirs, git.revision, jar.runnable" description="Creating everything for Jenkins.">
+    	<copy tofile="${dir.deploy}/plugin_intranda_step_changeWorkflow.xml" file="plugin_intranda_step_changeWorkflow.xml" />
+    </target>
 
     <!-- ================================= 
                   DEPLOY
