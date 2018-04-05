@@ -3,6 +3,34 @@
         name matches and step name is * 4.) project name and step name are * -->
     <config>
         <!-- which projects to use for (can be more then one, otherwise use *) -->
+        <project>Register</project>
+        <step>Check</step>
+        <!-- name of the property to check -->
+        <propertyName>TemplateID</propertyName>
+        <!-- expected value -->
+        <propertyValue>183</propertyValue>
+        <!-- list of steps to open, if property value matches -->
+        <steps type="open">
+            <title>Box preparation</title>
+        </steps>
+        <!-- list of steps to deactivate -->
+        <steps type="deactivate">
+            <title>Image QA</title>
+        </steps>
+        <!-- list of steps to close -->
+        <steps type="close">
+            <title>Automatic LayoutWizzard Cropping</title>
+            <title>LayoutWizzard: Manual confirmation</title>
+        </steps>
+        <!-- list of steps to lock -->
+        <steps type="lock">
+            <title>Automatic export to Islandora</title>
+        </steps>
+    </config>
+    <!-- order of configuration is: 1.) project name and step name matches 2.) step name matches and project is * 3.) project 
+        name matches and step name is * 4.) project name and step name are * -->
+    <config>
+        <!-- which projects to use for (can be more then one, otherwise use *) -->
         <project>*</project>
         <step>*</step>
         <!-- name of the property to check -->
