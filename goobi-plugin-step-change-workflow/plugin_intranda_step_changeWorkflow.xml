@@ -1,6 +1,12 @@
 <config_plugin>
-    <!-- order of configuration is: 1.) project name and step name matches 2.) step name matches and project is * 3.) project 
-        name matches and step name is * 4.) project name and step name are * -->
+    <!--
+    	order of configuration is: 
+	    1.) project name and step name matches 
+	    2.) step name matches and project is * 
+	    3.) project name matches and step name is * 
+	    4.) project name and step name are * 
+    -->
+    
     <config>
         <!-- which projects to use for (can be more then one, otherwise use *) -->
         <project>Register</project>
@@ -27,8 +33,7 @@
             <title>Automatic export to Islandora</title>
         </steps>
     </config>
-    <!-- order of configuration is: 1.) project name and step name matches 2.) step name matches and project is * 3.) project 
-        name matches and step name is * 4.) project name and step name are * -->
+   
     <config>
         <!-- which projects to use for (can be more then one, otherwise use *) -->
         <project>*</project>
@@ -57,4 +62,5 @@
             <title>Ingest into DigiTool</title>
         </steps>
     </config>
+    
 </config_plugin>
