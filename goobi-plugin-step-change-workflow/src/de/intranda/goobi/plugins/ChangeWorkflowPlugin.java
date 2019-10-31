@@ -102,8 +102,8 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
             // 2.) check if property and value exist in process
             boolean conditionMatches = false;
             for (Processproperty property : process.getEigenschaften()) {
-                if ((propertyCondition.equals("is") && property.getTitel().equals(propertyName) && property.getWert().equals(propertyValue)) || 
-                		(propertyCondition.equals("not") && property.getTitel().equals(propertyName) && !property.getWert().equals(propertyValue))) {
+                if ((propertyCondition.equals("is") && property.getTitel().equals(propertyName) && property.getWert().trim().equals(propertyValue)) || 
+                		(propertyCondition.equals("not") && property.getTitel().equals(propertyName) && !property.getWert().trim().equals(propertyValue))) {
                     conditionMatches = true;
                     anyConditionMatched = true;
                     break;
