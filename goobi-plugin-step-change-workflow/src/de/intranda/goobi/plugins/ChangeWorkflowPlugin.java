@@ -42,6 +42,7 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
 
     private String propertyName;
     private String propertyValue;
+    private String propertyCondition;
     private List<String> stepsToOpen = new ArrayList<>();
     private List<String> stepToDeactivate = new ArrayList<>();
     private List<String> stepsToClose = new ArrayList<>();
@@ -81,7 +82,9 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
             }
         }
         propertyName = config.getString("./propertyName");
-        propertyValue = config.getString("./propertyValue");
+        propertyValue = config.getString("./propertyValue", "");
+        // could be: is, not
+        propertyCondition = config.getString("./propertyCondition", "is");
 
         stepsToOpen = config.getList("./steps[@type='open']/title");
         stepToDeactivate = config.getList("./steps[@type='deactivate']/title");
@@ -93,15 +96,16 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
     public PluginReturnValue run() {
         //        1.) check if property and value are set
 
-        if (StringUtils.isBlank(propertyName) || StringUtils.isBlank(propertyValue)) {
-            log.error("Cannot find property name or value to check, abort");
+        if (StringUtils.isBlank(propertyName)) {
+            log.error("Cannot find property name, abort");
             return PluginReturnValue.ERROR;
         }
 
         //        2.) check if property and value exist in process
         boolean conditionMatches = false;
         for (Processproperty property : process.getEigenschaften()) {
-            if (property.getTitel().equals(propertyName) && property.getWert().equals(propertyValue)) {
+            if ((propertyCondition.equals("is") && property.getTitel().equals(propertyName) && property.getWert().equals(propertyValue)) || 
+            		(propertyCondition.equals("not") && property.getTitel().equals(propertyName) && !property.getWert().equals(propertyValue))) {
                 conditionMatches = true;
                 break;
             }

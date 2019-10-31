@@ -13,8 +13,10 @@
         <step>Check</step>
         <!-- name of the property to check -->
         <propertyName>TemplateID</propertyName>
-        <!-- expected value -->
+        <!-- expected value (can be blank too) -->
         <propertyValue>183</propertyValue>
+        <!-- condition for value comparing, can be 'is' or 'not' -->
+        <propertyCondition>is</propertyCondition>
         <!-- list of steps to open, if property value matches -->
         <steps type="open">
             <title>Box preparation</title>
@@ -40,8 +42,10 @@
         <step>*</step>
         <!-- name of the property to check -->
         <propertyName>upload to digitool</propertyName>
-        <!-- expected value -->
+        <!-- expected value (can be blank too) -->
         <propertyValue>No</propertyValue>
+        <!-- condition for value comparing, can be 'is' or 'not' -->
+        <propertyCondition>is</propertyCondition>
         <!-- list of steps to open, if property value matches -->
         <steps type="open">
             <title>Create derivates</title>
