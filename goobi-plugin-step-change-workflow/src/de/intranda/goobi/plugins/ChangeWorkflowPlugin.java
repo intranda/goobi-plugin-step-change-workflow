@@ -37,17 +37,10 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
     private PluginGuiType pluginGuiType = PluginGuiType.NONE;
     private String pagePath;
     private PluginType type = PluginType.Step;
-
+    
     private String title = "intranda_step_changeWorkflow";
-
-    private String propertyName;
-    private String propertyValue;
-    private String propertyCondition;
-    private List<String> stepsToOpen = new ArrayList<>();
-    private List<String> stepToDeactivate = new ArrayList<>();
-    private List<String> stepsToClose = new ArrayList<>();
-    private List<String> stepsToLock = new ArrayList<>();
-
+    private List <SubnodeConfiguration> changes;
+    
     @SuppressWarnings("unchecked")
     @Override
     public void initialize(Step step, String returnPath) {
@@ -62,7 +55,7 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         xmlConfig.setReloadingStrategy(new FileChangedReloadingStrategy());
 
         SubnodeConfiguration config = null;
-
+        
         // order of configuration is:
         //        1.) project name and step name matches
         //        2.) step name matches and project is *
@@ -81,70 +74,81 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
                 }
             }
         }
-        propertyName = config.getString("./propertyName");
-        propertyValue = config.getString("./propertyValue", "");
-        // could be: is, not
-        propertyCondition = config.getString("./propertyCondition", "is");
-
-        stepsToOpen = config.getList("./steps[@type='open']/title");
-        stepToDeactivate = config.getList("./steps[@type='deactivate']/title");
-        stepsToClose = config.getList("./steps[@type='close']/title");
-        stepsToLock = config.getList("./steps[@type='lock']/title");
+        
+        changes = config.configurationsAt("./change");
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public PluginReturnValue run() {
-        //        1.) check if property and value are set
-
-        if (StringUtils.isBlank(propertyName)) {
-            log.error("Cannot find property name, abort");
-            return PluginReturnValue.ERROR;
-        }
-
-        //        2.) check if property and value exist in process
-        boolean conditionMatches = false;
-        for (Processproperty property : process.getEigenschaften()) {
-            if ((propertyCondition.equals("is") && property.getTitel().equals(propertyName) && property.getWert().equals(propertyValue)) || 
-            		(propertyCondition.equals("not") && property.getTitel().equals(propertyName) && !property.getWert().equals(propertyValue))) {
-                conditionMatches = true;
-                break;
-            }
-        }
-
-        //        3.) run through tasks and change the status
-        if (conditionMatches) {
-            for (Step currentStep : process.getSchritteList()) {
-                for (String taskName : stepsToOpen) {
-                    if (currentStep.getTitel().equals(taskName)) {
-                        currentStep.setBearbeitungsstatusEnum(StepStatus.OPEN);
-                    }
-                }
-                for (String taskName : stepToDeactivate) {
-                    if (currentStep.getTitel().equals(taskName)) {
-                        currentStep.setBearbeitungsstatusEnum(StepStatus.DEACTIVATED);
-                    }
-                }
-
-                for (String taskName : stepsToLock) {
-                    if (currentStep.getTitel().equals(taskName)) {
-                        currentStep.setBearbeitungsstatusEnum(StepStatus.LOCKED);
-                    }
-                }
-
-                for (String taskName : stepsToClose) {
-                    if (currentStep.getTitel().equals(taskName)) {
-                        currentStep.setBearbeitungsstatusEnum(StepStatus.DONE);
-                    }
-                }
-
-            }
-            try {
-                ProcessManager.saveProcess(process);
-            } catch (DAOException e) {
-                log.error(e);
+    	boolean anyConditionMatched = false;
+    	
+    	// run through all configured changes
+    	for (SubnodeConfiguration config : changes) {
+        	String propertyName = config.getString("./propertyName");
+            String propertyValue = config.getString("./propertyValue", "");
+            String propertyCondition = config.getString("./propertyCondition", "is");
+            List<String> stepsToOpen = config.getList("./steps[@type='open']/title");
+            List<String> stepToDeactivate = config.getList("./steps[@type='deactivate']/title");
+            List<String> stepsToClose = config.getList("./steps[@type='close']/title");
+            List<String> stepsToLock = config.getList("./steps[@type='lock']/title");
+        	
+            // 1.) check if property name is set
+            if (StringUtils.isBlank(propertyName)) {
+                log.error("Cannot find property name, abort");
                 return PluginReturnValue.ERROR;
             }
+
+            // 2.) check if property and value exist in process
+            boolean conditionMatches = false;
+            for (Processproperty property : process.getEigenschaften()) {
+                if ((propertyCondition.equals("is") && property.getTitel().equals(propertyName) && property.getWert().equals(propertyValue)) || 
+                		(propertyCondition.equals("not") && property.getTitel().equals(propertyName) && !property.getWert().equals(propertyValue))) {
+                    conditionMatches = true;
+                    anyConditionMatched = true;
+                    break;
+                }
+            }
+
+            // 3.) run through tasks and change the status
+            if (conditionMatches) {
+                for (Step currentStep : process.getSchritteList()) {
+                    for (String taskName : stepsToOpen) {
+                        if (currentStep.getTitel().equals(taskName)) {
+                            currentStep.setBearbeitungsstatusEnum(StepStatus.OPEN);
+                        }
+                    }
+                    for (String taskName : stepToDeactivate) {
+                        if (currentStep.getTitel().equals(taskName)) {
+                            currentStep.setBearbeitungsstatusEnum(StepStatus.DEACTIVATED);
+                        }
+                    }
+
+                    for (String taskName : stepsToLock) {
+                        if (currentStep.getTitel().equals(taskName)) {
+                            currentStep.setBearbeitungsstatusEnum(StepStatus.LOCKED);
+                        }
+                    }
+
+                    for (String taskName : stepsToClose) {
+                        if (currentStep.getTitel().equals(taskName)) {
+                            currentStep.setBearbeitungsstatusEnum(StepStatus.DONE);
+                        }
+                    }
+                }
+            }
         }
+    	
+    	// save the process if any change was done
+    	if (anyConditionMatched) {
+	    	 try {
+	             ProcessManager.saveProcess(process);
+	         } catch (DAOException e) {
+	             log.error(e);
+	             return PluginReturnValue.ERROR;
+	         }
+    	}    	
+    	
         return PluginReturnValue.FINISH;
     }
 
