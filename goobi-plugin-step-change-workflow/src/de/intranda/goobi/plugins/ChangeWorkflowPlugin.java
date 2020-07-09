@@ -1,9 +1,10 @@
 package de.intranda.goobi.plugins;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
+import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.commons.configuration.SubnodeConfiguration;
 import org.apache.commons.configuration.XMLConfiguration;
 import org.apache.commons.configuration.reloading.FileChangedReloadingStrategy;
@@ -37,10 +38,10 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
     private PluginGuiType pluginGuiType = PluginGuiType.NONE;
     private String pagePath;
     private PluginType type = PluginType.Step;
-    
+
     private String title = "intranda_step_changeWorkflow";
-    private List <SubnodeConfiguration> changes;
-    
+    private List <HierarchicalConfiguration> changes;
+
     @SuppressWarnings("unchecked")
     @Override
     public void initialize(Step step, String returnPath) {
@@ -55,7 +56,7 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         xmlConfig.setReloadingStrategy(new FileChangedReloadingStrategy());
 
         SubnodeConfiguration config = null;
-        
+
         // order of configuration is:
         //        1.) project name and step name matches
         //        2.) step name matches and project is *
@@ -74,25 +75,25 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
                 }
             }
         }
-        
+
         changes = config.configurationsAt("./change");
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public PluginReturnValue run() {
-    	boolean anyConditionMatched = false;
-    	
-    	// run through all configured changes
-    	for (SubnodeConfiguration config : changes) {
-        	String propertyName = config.getString("./propertyName");
+        boolean anyConditionMatched = false;
+
+        // run through all configured changes
+        for (HierarchicalConfiguration config : changes) {
+            String propertyName = config.getString("./propertyName");
             String propertyValue = config.getString("./propertyValue", "");
             String propertyCondition = config.getString("./propertyCondition", "is");
-            List<String> stepsToOpen = config.getList("./steps[@type='open']/title");
-            List<String> stepToDeactivate = config.getList("./steps[@type='deactivate']/title");
-            List<String> stepsToClose = config.getList("./steps[@type='close']/title");
-            List<String> stepsToLock = config.getList("./steps[@type='lock']/title");
-        	
+            List<String> stepsToOpen = Arrays.asList(config.getStringArray("./steps[@type='open']/title"));
+            List<String> stepToDeactivate = Arrays.asList(config.getStringArray("./steps[@type='deactivate']/title"));
+            List<String> stepsToClose = Arrays.asList(config.getStringArray("./steps[@type='close']/title"));
+            List<String> stepsToLock = Arrays.asList(config.getStringArray("./steps[@type='lock']/title"));
+
             // 1.) check if property name is set
             if (StringUtils.isBlank(propertyName)) {
                 log.error("Cannot find property name, abort");
@@ -102,8 +103,8 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
             // 2.) check if property and value exist in process
             boolean conditionMatches = false;
             for (Processproperty property : process.getEigenschaften()) {
-                if ((propertyCondition.equals("is") && property.getTitel().equals(propertyName) && property.getWert().trim().equals(propertyValue)) || 
-                		(propertyCondition.equals("not") && property.getTitel().equals(propertyName) && !property.getWert().trim().equals(propertyValue))) {
+                if ((propertyCondition.equals("is") && property.getTitel().equals(propertyName) && property.getWert().trim().equals(propertyValue)) ||
+                        (propertyCondition.equals("not") && property.getTitel().equals(propertyName) && !property.getWert().trim().equals(propertyValue))) {
                     conditionMatches = true;
                     anyConditionMatched = true;
                     break;
@@ -138,17 +139,17 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
                 }
             }
         }
-    	
-    	// save the process if any change was done
-    	if (anyConditionMatched) {
-	    	 try {
-	             ProcessManager.saveProcess(process);
-	         } catch (DAOException e) {
-	             log.error(e);
-	             return PluginReturnValue.ERROR;
-	         }
-    	}    	
-    	
+
+        // save the process if any change was done
+        if (anyConditionMatched) {
+            try {
+                ProcessManager.saveProcess(process);
+            } catch (DAOException e) {
+                log.error(e);
+                return PluginReturnValue.ERROR;
+            }
+        }
+
         return PluginReturnValue.FINISH;
     }
 
