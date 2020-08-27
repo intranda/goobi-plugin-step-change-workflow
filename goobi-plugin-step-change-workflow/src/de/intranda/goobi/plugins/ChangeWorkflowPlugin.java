@@ -6,9 +6,6 @@ import java.util.List;
 
 import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.commons.configuration.SubnodeConfiguration;
-import org.apache.commons.configuration.XMLConfiguration;
-import org.apache.commons.configuration.reloading.FileChangedReloadingStrategy;
-import org.apache.commons.configuration.tree.xpath.XPathExpressionEngine;
 import org.apache.commons.lang.StringUtils;
 import org.goobi.beans.Process;
 import org.goobi.beans.Processproperty;
@@ -40,7 +37,7 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
     private PluginType type = PluginType.Step;
 
     private String title = "intranda_step_changeWorkflow";
-    private List <HierarchicalConfiguration> changes;
+    private List<HierarchicalConfiguration> changes;
 
     @SuppressWarnings("unchecked")
     @Override
@@ -49,33 +46,7 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         this.process = step.getProzess();
         this.pagePath = returnPath;
 
-        String projectName = step.getProzess().getProjekt().getTitel();
-
-        XMLConfiguration xmlConfig = ConfigPlugins.getPluginConfig(title);
-        xmlConfig.setExpressionEngine(new XPathExpressionEngine());
-        xmlConfig.setReloadingStrategy(new FileChangedReloadingStrategy());
-
-        SubnodeConfiguration config = null;
-
-        // order of configuration is:
-        //        1.) project name and step name matches
-        //        2.) step name matches and project is *
-        //        3.) project name matches and step name is *
-        //        4.) project name and step name are *
-        try {
-            config = xmlConfig.configurationAt("//config[./project = '" + projectName + "'][./step = '" + step.getTitel() + "']");
-        } catch (IllegalArgumentException e) {
-            try {
-                config = xmlConfig.configurationAt("//config[./project = '*'][./step = '" + step.getTitel() + "']");
-            } catch (IllegalArgumentException e1) {
-                try {
-                    config = xmlConfig.configurationAt("//config[./project = '" + projectName + "'][./step = '*']");
-                } catch (IllegalArgumentException e2) {
-                    config = xmlConfig.configurationAt("//config[./project = '*'][./step = '*']");
-                }
-            }
-        }
-
+        SubnodeConfiguration config = ConfigPlugins.getProjectAndStepConfig(title, step);
         changes = config.configurationsAt("./change");
     }
 
@@ -102,13 +73,37 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
 
             // 2.) check if property and value exist in process
             boolean conditionMatches = false;
-            for (Processproperty property : process.getEigenschaften()) {
-                if ((propertyCondition.equals("is") && property.getTitel().equals(propertyName) && property.getWert().trim().equals(propertyValue)) ||
-                        (propertyCondition.equals("not") && property.getTitel().equals(propertyName) && !property.getWert().trim().equals(propertyValue))) {
+            Processproperty pp = getProcessProperty(propertyName);
+            switch (propertyCondition) {
+            case "missing":
+                if (pp == null || pp.getWert() == null || pp.getWert().trim().equals("")) {
+                    conditionMatches = true;
+                    anyConditionMatched = true;
+                }
+                break;
+
+            case "available":
+                if (pp != null && pp.getWert() != null && !pp.getWert().trim().equals("")) {
+                    conditionMatches = true;
+                    anyConditionMatched = true;
+                }
+                break;
+
+            case "is":
+                if (pp.getWert().trim().equals(propertyValue)) {
                     conditionMatches = true;
                     anyConditionMatched = true;
                     break;
                 }
+                break;
+
+            case "not":
+                if (!pp.getWert().trim().equals(propertyValue)) {
+                    conditionMatches = true;
+                    anyConditionMatched = true;
+                    break;
+                }
+                break;
             }
 
             // 3.) run through tasks and change the status
@@ -151,6 +146,15 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         }
 
         return PluginReturnValue.FINISH;
+    }
+
+    private Processproperty getProcessProperty(String propertyName) {
+        for (Processproperty property : process.getEigenschaften()) {
+            if (property.getTitel().equals(propertyName)) {
+                return property;
+            }
+        }
+        return null;
     }
 
     @Override

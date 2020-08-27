@@ -18,7 +18,7 @@
 	        <propertyName>TemplateID</propertyName>
 	        <!-- expected value (can be blank too) -->
 	        <propertyValue>183</propertyValue>
-	        <!-- condition for value comparing, can be 'is' or 'not' -->
+	        <!-- condition for value comparing, can be 'is' or 'not' or 'missing' or 'available' -->
 	        <propertyCondition>is</propertyCondition>
 	        <!-- list of steps to open, if property value matches -->
 	        <steps type="open">
