@@ -75,35 +75,35 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
             boolean conditionMatches = false;
             Processproperty pp = getProcessProperty(propertyName);
             switch (propertyCondition) {
-            case "missing":
-                if (pp == null || pp.getWert() == null || pp.getWert().trim().equals("")) {
-                    conditionMatches = true;
-                    anyConditionMatched = true;
-                }
-                break;
-
-            case "available":
-                if (pp != null && pp.getWert() != null && !pp.getWert().trim().equals("")) {
-                    conditionMatches = true;
-                    anyConditionMatched = true;
-                }
-                break;
-
-            case "is":
-                if (pp.getWert().trim().equals(propertyValue)) {
-                    conditionMatches = true;
-                    anyConditionMatched = true;
+                case "missing":
+                    if (pp == null || pp.getWert() == null || pp.getWert().trim().equals("")) {
+                        conditionMatches = true;
+                        anyConditionMatched = true;
+                    }
                     break;
-                }
-                break;
 
-            case "not":
-                if (!pp.getWert().trim().equals(propertyValue)) {
-                    conditionMatches = true;
-                    anyConditionMatched = true;
+                case "available":
+                    if (pp != null && pp.getWert() != null && !pp.getWert().trim().equals("")) {
+                        conditionMatches = true;
+                        anyConditionMatched = true;
+                    }
                     break;
-                }
-                break;
+
+                case "is":
+                    if (pp != null && pp.getWert().trim().equals(propertyValue)) {
+                        conditionMatches = true;
+                        anyConditionMatched = true;
+                        break;
+                    }
+                    break;
+
+                case "not":
+                    if (pp == null || !pp.getWert().trim().equals(propertyValue)) {
+                        conditionMatches = true;
+                        anyConditionMatched = true;
+                        break;
+                    }
+                    break;
             }
 
             // 3.) run through tasks and change the status
