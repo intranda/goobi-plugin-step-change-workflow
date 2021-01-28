@@ -8,10 +8,12 @@ import java.util.Map;
 import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.commons.configuration.SubnodeConfiguration;
 import org.apache.commons.lang.StringUtils;
+import org.goobi.beans.LogEntry;
 import org.goobi.beans.Process;
 import org.goobi.beans.Processproperty;
 import org.goobi.beans.Step;
 import org.goobi.beans.Usergroup;
+import org.goobi.production.enums.LogType;
 import org.goobi.production.enums.PluginGuiType;
 import org.goobi.production.enums.PluginReturnValue;
 import org.goobi.production.enums.PluginType;
@@ -19,6 +21,7 @@ import org.goobi.production.enums.StepReturnValue;
 import org.goobi.production.plugin.interfaces.IStepPluginVersion2;
 
 import de.sub.goobi.config.ConfigPlugins;
+import de.sub.goobi.helper.VariableReplacer;
 import de.sub.goobi.helper.enums.StepStatus;
 import de.sub.goobi.helper.exceptions.DAOException;
 import de.sub.goobi.persistence.managers.ProcessManager;
@@ -27,6 +30,9 @@ import de.sub.goobi.persistence.managers.UsergroupManager;
 import lombok.Data;
 import lombok.extern.log4j.Log4j;
 import net.xeoh.plugins.base.annotations.PluginImplementation;
+import ugh.dl.DigitalDocument;
+import ugh.dl.Fileformat;
+import ugh.dl.Prefs;
 
 @PluginImplementation
 @Data
@@ -59,9 +65,45 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
 
         // run through all configured changes
         for (HierarchicalConfiguration config : changes) {
-            String propertyName = config.getString("./propertyName");
-            String propertyValue = config.getString("./propertyValue", "");
-            String propertyCondition = config.getString("./propertyCondition", "is");
+            
+            // load value via variable replacer
+            String variable = config.getString("./propertyName");
+            String preferedValue = config.getString("./propertyValue", "");
+            String condition = config.getString("./propertyCondition", "is");
+            String realValue = null;
+            
+            // read the real value from the variable replacer
+            DigitalDocument dd = null;
+            try {
+                Prefs prefs = process.getRegelsatz().getPreferences();
+                Fileformat ff = process.readMetadataFile();
+                if (ff == null) {
+                    log.error("Metadata file is not readable for process with ID " + step.getProcessId());
+                    LogEntry le = new LogEntry();
+                    le.setProcessId(step.getProzess().getId());
+                    le.setContent("Metadata file is not readable");
+                    le.setType(LogType.ERROR);
+                    le.setUserName("http step");
+                    ProcessManager.saveLogEntry(le);
+                    return PluginReturnValue.ERROR;
+                }
+                dd = ff.getDigitalDocument();
+                VariableReplacer replacer = new VariableReplacer(dd, prefs, step.getProzess(), step);
+                realValue = replacer.replace(variable);
+                if (realValue.equals(variable)) {
+                    realValue = null;
+                }
+            } catch (Exception e2) {
+                log.error("An exception occurred while reading the metadata file for process with ID " + step.getProcessId(), e2);
+                LogEntry le = new LogEntry();
+                le.setProcessId(step.getProzess().getId());
+                le.setContent("error reading metadata file");
+                le.setType(LogType.ERROR);
+                le.setUserName("http step");
+                ProcessManager.saveLogEntry(le);
+                return PluginReturnValue.ERROR;
+            }
+            
             List<String> stepsToOpen = Arrays.asList(config.getStringArray("./steps[@type='open']/title"));
             List<String> stepToDeactivate = Arrays.asList(config.getStringArray("./steps[@type='deactivate']/title"));
             List<String> stepsToClose = Arrays.asList(config.getStringArray("./steps[@type='close']/title"));
@@ -77,31 +119,30 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
             }
 
             // 1.) check if property name is set
-            if (StringUtils.isBlank(propertyName)) {
-                log.error("Cannot find property name, abort");
+            if (StringUtils.isBlank(variable)) {
+                log.error("Cannot find property, abort");
                 return PluginReturnValue.ERROR;
             }
 
             // 2.) check if property and value exist in process
             boolean conditionMatches = false;
-            Processproperty pp = getProcessProperty(propertyName);
-            switch (propertyCondition) {
+            switch (condition) {
                 case "missing":
-                    if (pp == null || pp.getWert() == null || pp.getWert().trim().equals("")) {
+                    if (realValue == null || realValue.trim().equals("")) {
                         conditionMatches = true;
                         anyConditionMatched = true;
                     }
                     break;
 
                 case "available":
-                    if (pp != null && pp.getWert() != null && !pp.getWert().trim().equals("")) {
+                    if (realValue != null && !realValue.trim().equals("")) {
                         conditionMatches = true;
                         anyConditionMatched = true;
                     }
                     break;
 
                 case "is":
-                    if (pp != null && pp.getWert().trim().equals(propertyValue)) {
+                    if (realValue != null && realValue.trim().equals(preferedValue)) {
                         conditionMatches = true;
                         anyConditionMatched = true;
                         break;
@@ -109,7 +150,7 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
                     break;
 
                 case "not":
-                    if (pp == null || !pp.getWert().trim().equals(propertyValue)) {
+                    if (realValue == null || !realValue.trim().equals(preferedValue)) {
                         conditionMatches = true;
                         anyConditionMatched = true;
                         break;
@@ -181,15 +222,6 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         }
 
         return PluginReturnValue.FINISH;
-    }
-
-    private Processproperty getProcessProperty(String propertyName) {
-        for (Processproperty property : process.getEigenschaften()) {
-            if (property.getTitel().equals(propertyName)) {
-                return property;
-            }
-        }
-        return null;
     }
 
     @Override
