@@ -37,6 +37,11 @@
 	        <steps type="lock">
 	            <title>Automatic export to Islandora</title>
 	        </steps>
+            
+            <usergroups step="Image QA">
+                <usergroup>Administration</usergroup>
+                <usergroup>AutomaticTasks</usergroup>
+            </usergroups>
         </change>
     </config>
    

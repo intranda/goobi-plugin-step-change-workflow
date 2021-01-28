@@ -3,6 +3,7 @@ package de.intranda.goobi.plugins;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.commons.configuration.SubnodeConfiguration;
@@ -10,6 +11,7 @@ import org.apache.commons.lang.StringUtils;
 import org.goobi.beans.Process;
 import org.goobi.beans.Processproperty;
 import org.goobi.beans.Step;
+import org.goobi.beans.Usergroup;
 import org.goobi.production.enums.PluginGuiType;
 import org.goobi.production.enums.PluginReturnValue;
 import org.goobi.production.enums.PluginType;
@@ -20,6 +22,8 @@ import de.sub.goobi.config.ConfigPlugins;
 import de.sub.goobi.helper.enums.StepStatus;
 import de.sub.goobi.helper.exceptions.DAOException;
 import de.sub.goobi.persistence.managers.ProcessManager;
+import de.sub.goobi.persistence.managers.StepManager;
+import de.sub.goobi.persistence.managers.UsergroupManager;
 import lombok.Data;
 import lombok.extern.log4j.Log4j;
 import net.xeoh.plugins.base.annotations.PluginImplementation;
@@ -39,7 +43,6 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
     private String title = "intranda_step_changeWorkflow";
     private List<HierarchicalConfiguration> changes;
 
-    @SuppressWarnings("unchecked")
     @Override
     public void initialize(Step step, String returnPath) {
         this.step = step;
@@ -50,7 +53,6 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         changes = config.configurationsAt("./change");
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public PluginReturnValue run() {
         boolean anyConditionMatched = false;
@@ -64,6 +66,15 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
             List<String> stepToDeactivate = Arrays.asList(config.getStringArray("./steps[@type='deactivate']/title"));
             List<String> stepsToClose = Arrays.asList(config.getStringArray("./steps[@type='close']/title"));
             List<String> stepsToLock = Arrays.asList(config.getStringArray("./steps[@type='lock']/title"));
+
+            Map<String, List<String>> userGroupChanges = new HashMap<>();
+
+            List<HierarchicalConfiguration> userGroupDefinition = config.configurationsAt("./usergroups");
+            for (HierarchicalConfiguration def : userGroupDefinition) {
+                String stepTitle = def.getString("@step");
+                List<String> groups = Arrays.asList(def.getStringArray("usergroup"));
+                userGroupChanges.put(stepTitle, groups);
+            }
 
             // 1.) check if property name is set
             if (StringUtils.isBlank(propertyName)) {
@@ -131,6 +142,30 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
                             currentStep.setBearbeitungsstatusEnum(StepStatus.DONE);
                         }
                     }
+
+                    for (String taskName : userGroupChanges.keySet()) {
+                        if (currentStep.getTitel().equals(taskName)) {
+
+                            // remove old usergroups
+                            List<Usergroup> currentGroups = currentStep.getBenutzergruppen();
+                            for (Usergroup oldGroup : currentGroups) {
+                                StepManager.removeUsergroupFromStep(currentStep, oldGroup);
+                            }
+                            currentStep.getBenutzergruppen().clear();
+
+                            // add new user group assignments
+                            List<String> userGroupNames = userGroupChanges.get(taskName);
+                            for (String newGroupName : userGroupNames) {
+                                Usergroup ug = UsergroupManager.getUsergroupByName(newGroupName);
+                                if (ug != null) {
+                                    currentStep.getBenutzergruppen().add(ug);
+                                }
+                            }
+                            // StepManager.saveStep(currentStep);
+
+                        }
+                    }
+
                 }
             }
         }
