@@ -14,8 +14,8 @@
 
 		<!-- multiple changes can be done within one configuration rule; simply add another 'change' element with other properties here -->
 		<change>
-			<!-- name of the property to check -->
-			<propertyName>TemplateID</propertyName>
+			<!-- name of the property or metadata to check: please take care to use the syntax of the Variable replacer here -->
+			<propertyName>{process.TemplateID}</propertyName>
 			<!-- expected value (can be blank too) -->
 			<propertyValue>183</propertyValue>
 			<!-- condition for value comparing, can be 'is' or 'not' or 'missing' or 'available' -->
@@ -52,8 +52,8 @@
 
 		<!-- multiple changes can be done within one configuration rule; simply add another 'change' element with other properties here -->
 		<change>
-			<!-- name of the property to check -->
-			<propertyName>upload to digitool</propertyName>
+			<!-- name of the property or metadata to check: please take care to use the syntax of the Variable replacer here -->
+			<propertyName>{process.upload to digitool}</propertyName>
 			<!-- expected value (can be blank too) -->
 			<propertyValue>No</propertyValue>
 			<!-- condition for value comparing, can be 'is' or 'not' -->
