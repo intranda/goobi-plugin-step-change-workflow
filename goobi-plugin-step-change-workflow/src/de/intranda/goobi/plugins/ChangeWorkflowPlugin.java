@@ -10,7 +10,6 @@ import org.apache.commons.configuration.SubnodeConfiguration;
 import org.apache.commons.lang.StringUtils;
 import org.goobi.beans.LogEntry;
 import org.goobi.beans.Process;
-import org.goobi.beans.Processproperty;
 import org.goobi.beans.Step;
 import org.goobi.beans.Usergroup;
 import org.goobi.production.enums.LogType;
@@ -21,6 +20,7 @@ import org.goobi.production.enums.StepReturnValue;
 import org.goobi.production.plugin.interfaces.IStepPluginVersion2;
 
 import de.sub.goobi.config.ConfigPlugins;
+import de.sub.goobi.helper.BeanHelper;
 import de.sub.goobi.helper.VariableReplacer;
 import de.sub.goobi.helper.enums.StepStatus;
 import de.sub.goobi.helper.exceptions.DAOException;
@@ -65,13 +65,13 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
 
         // run through all configured changes
         for (HierarchicalConfiguration config : changes) {
-            
+
             // load value via variable replacer
             String variable = config.getString("./propertyName");
             String preferedValue = config.getString("./propertyValue", "");
             String condition = config.getString("./propertyCondition", "is");
             String realValue = null;
-            
+
             // read the real value from the variable replacer
             DigitalDocument dd = null;
             try {
@@ -103,7 +103,8 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
                 ProcessManager.saveLogEntry(le);
                 return PluginReturnValue.ERROR;
             }
-            
+
+            String processTemplateName = config.getString("workflow");
             List<String> stepsToOpen = Arrays.asList(config.getStringArray("./steps[@type='open']/title"));
             List<String> stepToDeactivate = Arrays.asList(config.getStringArray("./steps[@type='deactivate']/title"));
             List<String> stepsToClose = Arrays.asList(config.getStringArray("./steps[@type='close']/title"));
@@ -156,6 +157,15 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
                         break;
                     }
                     break;
+            }
+
+            // change process template
+            if (conditionMatches && StringUtils.isNotBlank(processTemplateName)) {
+                Process template = ProcessManager.getProcessByExactTitle(processTemplateName);
+                if (template != null) {
+                    BeanHelper helper = new BeanHelper();
+                    helper.changeProcessTemplate(process, template);
+                }
             }
 
             // 3.) run through tasks and change the status
