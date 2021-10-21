@@ -1,6 +1,7 @@
 package de.intranda.goobi.plugins;
 
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -165,6 +166,19 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
                 if (template != null) {
                     BeanHelper helper = new BeanHelper();
                     helper.changeProcessTemplate(process, template);
+                    // check, if the new workflow has the current step in it
+                    for (Step newTask : process.getSchritteList()) {
+                        if (StringUtils.isNotBlank(newTask.getStepPlugin()) && title.equals(newTask.getStepPlugin())
+                                && newTask.getTitel().equals(this.step.getTitel())) {
+                            // if this is the case, use old creation date and user
+                            newTask.setBearbeitungsbeginn(this.step.getBearbeitungsbeginn());
+                            newTask.setBearbeitungsbenutzer(this.step.getBearbeitungsbenutzer());
+                            // finish the task
+                            newTask.setBearbeitungsende(new Date());
+                            newTask.setBearbeitungsstatusEnum(StepStatus.DONE);
+
+                        }
+                    }
                 }
             }
 
