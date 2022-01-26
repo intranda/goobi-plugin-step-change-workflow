@@ -96,6 +96,7 @@
             <propertyCondition>is</propertyCondition>
             <!-- Name of the new process template -->
             <workflow>Manuscript workflow</workflow>
+            <project></project>
         </change>
     </config>
 

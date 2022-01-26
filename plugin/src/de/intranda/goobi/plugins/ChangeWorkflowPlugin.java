@@ -11,6 +11,7 @@ import org.apache.commons.configuration.SubnodeConfiguration;
 import org.apache.commons.lang.StringUtils;
 import org.goobi.beans.LogEntry;
 import org.goobi.beans.Process;
+import org.goobi.beans.Project;
 import org.goobi.beans.Step;
 import org.goobi.beans.Usergroup;
 import org.goobi.production.enums.LogType;
@@ -26,6 +27,7 @@ import de.sub.goobi.helper.VariableReplacer;
 import de.sub.goobi.helper.enums.StepStatus;
 import de.sub.goobi.helper.exceptions.DAOException;
 import de.sub.goobi.persistence.managers.ProcessManager;
+import de.sub.goobi.persistence.managers.ProjectManager;
 import de.sub.goobi.persistence.managers.StepManager;
 import de.sub.goobi.persistence.managers.UsergroupManager;
 import lombok.Data;
@@ -105,7 +107,9 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
                 return PluginReturnValue.ERROR;
             }
 
-            String processTemplateName = config.getString("workflow");
+            String processTemplateName = config.getString("./workflow");
+            String projectName = config.getString("./project");
+
             List<String> stepsToOpen = Arrays.asList(config.getStringArray("./steps[@type='open']/title"));
             List<String> stepToDeactivate = Arrays.asList(config.getStringArray("./steps[@type='deactivate']/title"));
             List<String> stepsToClose = Arrays.asList(config.getStringArray("./steps[@type='close']/title"));
@@ -179,6 +183,20 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
 
                         }
                     }
+                }
+            }
+
+
+            if (conditionMatches && StringUtils.isNotBlank(projectName)) {
+                try {
+                    Project  newProject = ProjectManager.getProjectByName(projectName);
+                    if (newProject != null) {
+                        process.setProjekt(newProject);
+                        process.setProjectId(newProject.getId());
+                    }
+
+                } catch (DAOException e) {
+                    log.error(e);
                 }
             }
 
