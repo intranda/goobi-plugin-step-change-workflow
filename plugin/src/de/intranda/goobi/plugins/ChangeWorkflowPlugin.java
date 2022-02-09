@@ -1,5 +1,6 @@
 package de.intranda.goobi.plugins;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
@@ -22,6 +23,7 @@ import org.goobi.production.plugin.interfaces.IStepPluginVersion2;
 
 import de.sub.goobi.config.ConfigPlugins;
 import de.sub.goobi.helper.BeanHelper;
+import de.sub.goobi.helper.ScriptThreadWithoutHibernate;
 import de.sub.goobi.helper.VariableReplacer;
 import de.sub.goobi.helper.enums.StepStatus;
 import de.sub.goobi.helper.exceptions.DAOException;
@@ -63,14 +65,15 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
     @Override
     public PluginReturnValue run() {
         boolean anyConditionMatched = false;
+        List<String> automaticRunSteps = new ArrayList<>();
 
         // run through all configured changes
-        for (HierarchicalConfiguration config : changes) {
+        for (HierarchicalConfiguration configChanges : changes) {
 
             // load value via variable replacer
-            String variable = config.getString("./propertyName");
-            String preferedValue = config.getString("./propertyValue", "");
-            String condition = config.getString("./propertyCondition", "is");
+            String variable = configChanges.getString("./propertyName");
+            String preferedValue = configChanges.getString("./propertyValue", "");
+            String condition = configChanges.getString("./propertyCondition", "is");
             String realValue = null;
 
             // read the real value from the variable replacer
@@ -105,15 +108,16 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
                 return PluginReturnValue.ERROR;
             }
 
-            String processTemplateName = config.getString("workflow");
-            List<String> stepsToOpen = Arrays.asList(config.getStringArray("./steps[@type='open']/title"));
-            List<String> stepToDeactivate = Arrays.asList(config.getStringArray("./steps[@type='deactivate']/title"));
-            List<String> stepsToClose = Arrays.asList(config.getStringArray("./steps[@type='close']/title"));
-            List<String> stepsToLock = Arrays.asList(config.getStringArray("./steps[@type='lock']/title"));
+            String processTemplateName = configChanges.getString("workflow");
+            List<String> stepsToOpen = Arrays.asList(configChanges.getStringArray("./steps[@type='open']/title"));
+            List<String> stepToDeactivate = Arrays.asList(configChanges.getStringArray("./steps[@type='deactivate']/title"));
+            List<String> stepsToClose = Arrays.asList(configChanges.getStringArray("./steps[@type='close']/title"));
+            List<String> stepsToLock = Arrays.asList(configChanges.getStringArray("./steps[@type='lock']/title"));
+            List<String> stepsToRunAutomatic = Arrays.asList(configChanges.getStringArray("./steps[@type='run']/title"));
 
             Map<String, List<String>> userGroupChanges = new HashMap<>();
 
-            List<HierarchicalConfiguration> userGroupDefinition = config.configurationsAt("./usergroups");
+            List<HierarchicalConfiguration> userGroupDefinition = configChanges.configurationsAt("./usergroups");
             for (HierarchicalConfiguration def : userGroupDefinition) {
                 String stepTitle = def.getString("@step");
                 List<String> groups = Arrays.asList(def.getStringArray("usergroup"));
@@ -158,6 +162,10 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
                         break;
                     }
                     break;
+            }
+
+            if (conditionMatches) {
+                automaticRunSteps.addAll(stepsToRunAutomatic);
             }
 
             // change process template
@@ -242,6 +250,14 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
             } catch (DAOException e) {
                 log.error(e);
                 return PluginReturnValue.ERROR;
+            }
+            for (Step currentStep : process.getSchritteList()) {
+                for (String autoRunStepName : automaticRunSteps) {
+                    if (currentStep.getTitel().equals(autoRunStepName)) {
+                        ScriptThreadWithoutHibernate scriptThread = new ScriptThreadWithoutHibernate(currentStep);
+                        scriptThread.startOrPutToQueue();
+                    }
+                }
             }
         }
 
