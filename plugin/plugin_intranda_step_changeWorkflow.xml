@@ -37,6 +37,10 @@
 			<steps type="lock">
 				<title>Automatic export to Islandora</title>
 			</steps>
+             <!-- list of automatic steps to run -->
+            <steps type="run">
+                <title>Create derivates</title>
+            </steps>
 
 			<usergroups step="Image QA">
 				<usergroup>Administration</usergroup>
@@ -77,6 +81,10 @@
 				<title>Create METS file</title>
 				<title>Ingest into DigiTool</title>
 			</steps>
+            <!-- list of automatic steps to run -->
+            <steps type="run">
+                <title>Create derivates</title>
+            </steps>
 		</change>
 	</config>
 
@@ -96,6 +104,7 @@
             <propertyCondition>is</propertyCondition>
             <!-- Name of the new process template -->
             <workflow>Manuscript workflow</workflow>
+            <project></project>
         </change>
     </config>
 

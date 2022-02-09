@@ -12,6 +12,7 @@ import org.apache.commons.configuration.SubnodeConfiguration;
 import org.apache.commons.lang.StringUtils;
 import org.goobi.beans.LogEntry;
 import org.goobi.beans.Process;
+import org.goobi.beans.Project;
 import org.goobi.beans.Step;
 import org.goobi.beans.Usergroup;
 import org.goobi.production.enums.LogType;
@@ -28,6 +29,7 @@ import de.sub.goobi.helper.VariableReplacer;
 import de.sub.goobi.helper.enums.StepStatus;
 import de.sub.goobi.helper.exceptions.DAOException;
 import de.sub.goobi.persistence.managers.ProcessManager;
+import de.sub.goobi.persistence.managers.ProjectManager;
 import de.sub.goobi.persistence.managers.StepManager;
 import de.sub.goobi.persistence.managers.UsergroupManager;
 import lombok.Data;
@@ -108,7 +110,9 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
                 return PluginReturnValue.ERROR;
             }
 
-            String processTemplateName = configChanges.getString("workflow");
+            String processTemplateName = configChanges.getString("./workflow");
+            String projectName = configChanges.getString("./project");
+
             List<String> stepsToOpen = Arrays.asList(configChanges.getStringArray("./steps[@type='open']/title"));
             List<String> stepToDeactivate = Arrays.asList(configChanges.getStringArray("./steps[@type='deactivate']/title"));
             List<String> stepsToClose = Arrays.asList(configChanges.getStringArray("./steps[@type='close']/title"));
@@ -187,6 +191,19 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
 
                         }
                     }
+                }
+            }
+
+            if (conditionMatches && StringUtils.isNotBlank(projectName)) {
+                try {
+                    Project newProject = ProjectManager.getProjectByName(projectName);
+                    if (newProject != null) {
+                        process.setProjekt(newProject);
+                        process.setProjectId(newProject.getId());
+                    }
+
+                } catch (DAOException e) {
+                    log.error(e);
                 }
             }
 
