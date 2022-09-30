@@ -10,7 +10,6 @@ import java.util.Map;
 import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.commons.configuration.SubnodeConfiguration;
 import org.apache.commons.lang.StringUtils;
-import org.goobi.beans.LogEntry;
 import org.goobi.beans.Process;
 import org.goobi.beans.Project;
 import org.goobi.beans.Step;
@@ -24,6 +23,7 @@ import org.goobi.production.plugin.interfaces.IStepPluginVersion2;
 
 import de.sub.goobi.config.ConfigPlugins;
 import de.sub.goobi.helper.BeanHelper;
+import de.sub.goobi.helper.Helper;
 import de.sub.goobi.helper.ScriptThreadWithoutHibernate;
 import de.sub.goobi.helper.VariableReplacer;
 import de.sub.goobi.helper.enums.StepStatus;
@@ -85,12 +85,7 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
                 Fileformat ff = process.readMetadataFile();
                 if (ff == null) {
                     log.error("Metadata file is not readable for process with ID " + step.getProcessId());
-                    LogEntry le = new LogEntry();
-                    le.setProcessId(step.getProzess().getId());
-                    le.setContent("Metadata file is not readable");
-                    le.setType(LogType.ERROR);
-                    le.setUserName("http step");
-                    ProcessManager.saveLogEntry(le);
+                    Helper.addMessageToProcessJournal(step.getProzess().getId(), LogType.ERROR, "Metadata file is not readable", "http step");
                     return PluginReturnValue.ERROR;
                 }
                 dd = ff.getDigitalDocument();
@@ -101,12 +96,7 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
                 }
             } catch (Exception e2) {
                 log.error("An exception occurred while reading the metadata file for process with ID " + step.getProcessId(), e2);
-                LogEntry le = new LogEntry();
-                le.setProcessId(step.getProzess().getId());
-                le.setContent("error reading metadata file");
-                le.setType(LogType.ERROR);
-                le.setUserName("http step");
-                ProcessManager.saveLogEntry(le);
+                Helper.addMessageToProcessJournal(step.getProzess().getId(), LogType.ERROR, "error reading metadata file", "http step");
                 return PluginReturnValue.ERROR;
             }
 
