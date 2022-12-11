@@ -46,6 +46,12 @@
 				<usergroup>Administration</usergroup>
 				<usergroup>AutomaticTasks</usergroup>
 			</usergroups>
+			
+			<!-- write a message into the journal (aka process log) -->
+			<log type="info">My info message</log>
+			<log type="error">My error message</log>
+			<log type="user">My user message</log>
+			
 		</change>
 	</config>
 

@@ -118,6 +118,11 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
                 userGroupChanges.put(stepTitle, groups);
             }
 
+            List<String> logError = Arrays.asList(configChanges.getStringArray("./log[@type='error']"));
+            List<String> logInfo = Arrays.asList(configChanges.getStringArray("./log[@type='info']"));
+            List<String> logUser = Arrays.asList(configChanges.getStringArray("./log[@type='user']"));
+            List<String> logDebug = Arrays.asList(configChanges.getStringArray("./log[@type='debug']"));
+            
             // 1.) check if property name is set
             if (StringUtils.isBlank(variable)) {
                 log.error("Cannot find property, abort");
@@ -197,6 +202,23 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
                 }
             }
 
+
+            // add log entries into the journal (process log)
+            if (conditionMatches) {
+            	for (String s : logError) {
+					Helper.addMessageToProcessLog(process.getId(), LogType.ERROR, s);
+				}
+            	for (String s : logInfo) {
+					Helper.addMessageToProcessLog(process.getId(), LogType.INFO, s);
+				}
+            	for (String s : logUser) {
+					Helper.addMessageToProcessLog(process.getId(), LogType.USER, s);
+				}
+            	for (String s : logDebug) {
+					Helper.addMessageToProcessLog(process.getId(), LogType.DEBUG, s);
+				}
+            }
+            
             // 3.) run through tasks and change the status
             if (conditionMatches) {
                 for (Step currentStep : process.getSchritteList()) {
