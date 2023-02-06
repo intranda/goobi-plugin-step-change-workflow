@@ -111,8 +111,13 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
             List<String> stepsToLock = Arrays.asList(configChanges.getStringArray("./steps[@type='lock']/title"));
             List<String> stepsToRunAutomatic = Arrays.asList(configChanges.getStringArray("./steps[@type='run']/title"));
 
-            Map<String, List<String>> userGroupChanges = new HashMap<>();
+            List<String> stepsWithPriorityStandard = Arrays.asList(configChanges.getStringArray("./priority[@value='0']/title"));
+            List<String> stepsWithPriorityHigh = Arrays.asList(configChanges.getStringArray("./priority[@value='1']/title"));
+            List<String> stepsWithPriorityHigher = Arrays.asList(configChanges.getStringArray("./priority[@value='2']/title"));
+            List<String> stepsWithPriorityHighest = Arrays.asList(configChanges.getStringArray("./priority[@value='3']/title"));
+            List<String> stepsWithPriorityCorrection = Arrays.asList(configChanges.getStringArray("./priority[@value='10']/title"));
 
+            Map<String, List<String>> userGroupChanges = new HashMap<>();
             List<HierarchicalConfiguration> userGroupDefinition = configChanges.configurationsAt("./usergroups");
             for (HierarchicalConfiguration def : userGroupDefinition) {
                 String stepTitle = def.getString("@step");
@@ -158,9 +163,15 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
                 addAllLogEntries(process, logLists, logTypeValues);
 
                 // 3.) run through tasks and change the status
-                List<List<String>> stepsLists = Arrays.asList(stepsToOpen, stepsToDeactivate, stepsToClose, stepsToLock);
+                List<List<String>> stepsTypeLists = Arrays.asList(stepsToOpen, stepsToDeactivate, stepsToClose, stepsToLock);
                 StepStatus[] statusValues = new StepStatus[] { StepStatus.OPEN, StepStatus.DEACTIVATED, StepStatus.DONE, StepStatus.LOCKED };
-                changeAllStatus(process, stepsLists, statusValues, userGroupChanges);
+                changeAllStatus(process, stepsTypeLists, statusValues, userGroupChanges);
+                
+                // run through tasks and change their priorties
+                List<List<String>> stepsPriorityLists = Arrays.asList(stepsWithPriorityStandard, stepsWithPriorityHigh, stepsWithPriorityHigher,
+                        stepsWithPriorityHighest, stepsWithPriorityCorrection);
+                int[] priorityValues = new int[] { 0, 1, 2, 3, 10 };
+                changeAllPriorities(process, stepsPriorityLists, priorityValues);
             }
         }
 
@@ -317,6 +328,28 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
                     }
                 }
                 // StepManager.saveStep(currentStep);
+            }
+        }
+    }
+
+    private void changeAllPriorities(Process process, List<List<String>> stepsLists, int[] priorityValues) {
+        if (stepsLists.size() != priorityValues.length) {
+            // error here since these two must match
+        }
+        for (Step currentStep : process.getSchritteList()) {
+            int count = 0;
+            for (List<String> stepsList : stepsLists) {
+                changePriority(currentStep, stepsList, priorityValues[count]);
+                ++count;
+            }
+        }
+    }
+
+    private void changePriority(Step currentStep, List<String> stepsList, int priority) {
+        String currentStepName = currentStep.getTitel();
+        for (String taskName : stepsList) {
+            if (currentStepName.equals(taskName)) {
+                currentStep.setPrioritaet(priority);
             }
         }
     }
