@@ -144,6 +144,17 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         return PluginReturnValue.FINISH;
     }
 
+    /**
+     * use VariableReplacer to get the real value of the given Goobi variable
+     * 
+     * @param process the Goobi process, used to get the VariableReplacer object
+     * @param variable the Goobi variable that is to be replaced
+     * @return the value of the variable if it is a valid Goobi variable, null otherwise
+     * @throws ReadException
+     * @throws IOException
+     * @throws SwapException
+     * @throws PreferencesException
+     */
     private String getRealValue(Process process, String variable) throws ReadException, IOException, SwapException, PreferencesException {
         Prefs prefs = process.getRegelsatz().getPreferences();
         Fileformat ff = process.readMetadataFile();
@@ -163,6 +174,14 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         return realValue;
     }
 
+    /**
+     * check if the real value satisfies for the given condition
+     * 
+     * @param condition options are "missing" "available" "is" and "not", any other inputs would just trigger a false to return
+     * @param realValue
+     * @param preferedValue used for conditions "is" and "not"
+     * @return true if the real value input satisfies for the given condition, false otherwise
+     */
     private boolean checkCondition(String condition, String realValue, String preferedValue) {
         log.debug("checking condition: " + condition);
         switch (condition) {
@@ -183,11 +202,23 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         }
     }
 
+    /**
+     * get newly configured automatic steps and add it into the input list
+     * 
+     * @param configChanges used to get the newly configured automatic steps
+     * @param automaticRunSteps list for keeping all automatic steps
+     */
     private void prepareAutomaticSteps(HierarchicalConfiguration configChanges, List<String> automaticRunSteps) {
         List<String> stepsToRunAutomatic = getStepsGivenStatus(configChanges, "run");
         automaticRunSteps.addAll(stepsToRunAutomatic);
     }
 
+    /**
+     * process changes regarding process templates
+     * 
+     * @param process the Goobi process
+     * @param configChanges used to get the newly configured process template name
+     */
     private void processProcessTemplate(Process process, HierarchicalConfiguration configChanges) {
         String processTemplateName = configChanges.getString("./workflow");
         log.debug("processTemplateName = " + processTemplateName);
@@ -197,6 +228,12 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         }
     }
 
+    /**
+     * apply changes regarding process templates
+     * 
+     * @param process the Goobi process
+     * @param processTemplateName name of the new process template
+     */
     private void changeProcessTemplate(Process process, String processTemplateName) {
         log.debug("changing processTemplateName: " + processTemplateName);
         Process template = ProcessManager.getProcessByExactTitle(processTemplateName);
@@ -218,6 +255,12 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         }
     }
 
+    /**
+     * process changes regarding projects
+     * 
+     * @param process the Goobi process
+     * @param configChanges used to get the newly configured process project name
+     */
     private void processProject(Process process, HierarchicalConfiguration configChanges) {
         String projectName = configChanges.getString("./project");
         log.debug("projectName = " + projectName);
@@ -227,6 +270,12 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         }
     }
 
+    /**
+     * apply changes regarding projects
+     * 
+     * @param process the Goobi process
+     * @param projectName name of the new project
+     */
     private void changeProject(Process process, String projectName) {
         log.debug("changing projectName: " + projectName);
         try {
@@ -242,6 +291,12 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         }
     }
 
+    /**
+     * process changes regarding logs
+     * 
+     * @param process the Goobi process
+     * @param configChanges used to get the newly configured log types
+     */
     private void processLogs(Process process, HierarchicalConfiguration configChanges) {
         log.debug("processing logs");
         List<String> logError = getLogsGivenType(configChanges, "error");
@@ -254,6 +309,12 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         addAllLogEntries(process, logLists, logTypeValues);
     }
 
+    /**
+     * process changes regarding steps' status
+     * 
+     * @param process the Goobi process
+     * @param configChanges used to get the newly configured steps with their status values
+     */
     private void processStepsStatus(Process process, HierarchicalConfiguration configChanges) {
         log.debug("processing steps' status");
         List<String> stepsToOpen = getStepsGivenStatus(configChanges, "open");
@@ -274,6 +335,12 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         changeAllStatus(process, stepsTypeLists, statusValues, userGroupChanges);
     }
 
+    /**
+     * process changes regarding steps' priorities
+     * 
+     * @param process the Goobi process
+     * @param configChanges used to get the newly configured steps with their priorities
+     */
     private void processStepsPriority(Process process, HierarchicalConfiguration configChanges) {
         log.debug("processing steps' priority");
         List<String> stepsWithPriorityStandard = getStepsGivenPriority(configChanges, "0");
@@ -288,6 +355,13 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         changeAllPriorities(process, stepsPriorityLists, priorityValues);
     }
 
+    /**
+     * get the list of steps given the input status value
+     * 
+     * @param configChanges used to get the list of steps
+     * @param statusValue
+     * @return the list of names of the configured steps whose configured status values equal the input
+     */
     private List<String> getStepsGivenStatus(HierarchicalConfiguration configChanges, String statusValue) {
         String tagName = "steps";
         String attributeName = "type";
@@ -295,6 +369,13 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         return getChangesWithProperty(configChanges, tagName, attributeName, statusValue, option);
     }
 
+    /**
+     * get the list of steps given the input priority value
+     * 
+     * @param configChanges used to get the list of steps
+     * @param priority
+     * @return the list of names of the configured steps whose configured priority values equal the input
+     */
     private List<String> getStepsGivenPriority(HierarchicalConfiguration configChanges, String priority) {
         String tagName = "priority";
         String attributeName = "value";
@@ -302,6 +383,13 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         return getChangesWithProperty(configChanges, tagName, attributeName, priority, option);
     }
 
+    /**
+     * get the list of logs given the input log type
+     * 
+     * @param configChanges used to get the list of logs
+     * @param typeValue
+     * @return the list of the configured logs whose configured type values equal the input
+     */
     private List<String> getLogsGivenType(HierarchicalConfiguration configChanges, String typeValue) {
         String tagName = "log";
         String attributeName = "type";
@@ -309,31 +397,67 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         return getChangesWithProperty(configChanges, tagName, attributeName, typeValue, option);
     }
 
+    /**
+     * get the list of items in a <change></change> block given a tag name, an attribute name, an attribute value and an option
+     * 
+     * @param configChanges used to get the list
+     * @param tagName
+     * @param attributeName
+     * @param attributeValue
+     * @param option name of a child tag under tagName, default ""
+     * @return the list of items that match
+     */
     private List<String> getChangesWithProperty(HierarchicalConfiguration configChanges, String tagName, String attributeName, String attributeValue,
             String option) {
         String changePath = "./" + tagName + "[@" + attributeName + "='" + attributeValue + "']" + (StringUtils.isBlank(option) ? "" : "/" + option);
         return Arrays.asList(configChanges.getStringArray(changePath));
     }
 
+    /**
+     * add all newly configured log types into the process
+     * 
+     * @param process the Goobi process
+     * @param logLists lists of configured logs of different types
+     * @param logTypeValues the list of log types of elements of logLists
+     */
     private void addAllLogEntries(Process process, List<List<String>> logLists, LogType[] logTypeValues) {
         if (logLists.size() != logTypeValues.length) {
             // error here since these two must match
+            log.error("The sizes of the input list and array do not match!");
+            return;
         }
         for (int i = 0; i < logLists.size(); ++i) {
             addLogEntries(process, logLists.get(i), logTypeValues[i]);
         }
     }
 
+    /**
+     * add a list of logs of one given type into the process
+     * 
+     * @param process the Goobi process
+     * @param logList list of configured logs of type logType
+     * @param logType type of elements of logList
+     */
     private void addLogEntries(Process process, List<String> logList, LogType logType) {
         for (String s : logList) {
             Helper.addMessageToProcessLog(process.getId(), logType, s);
         }
     }
 
+    /**
+     * change all status values of the steps of the process
+     * 
+     * @param process the Goobi process
+     * @param stepsLists lists of steps with different status values
+     * @param statusValues the list of status values for the lists in stepsLists
+     * @param userGroupChanges the list of changes upon user group
+     */
     private void changeAllStatus(Process process, List<List<String>> stepsLists, StepStatus[] statusValues,
             Map<String, List<String>> userGroupChanges) {
         if (stepsLists.size() != statusValues.length) {
             // error here since these two must match
+            log.error("The sizes of the input list and array do not match!");
+            return;
         }
         for (Step currentStep : process.getSchritteList()) {
             // change step status
@@ -346,6 +470,13 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         }
     }
 
+    /**
+     * change the status value of the input step
+     * 
+     * @param currentStep the Step whose status value is to be changed
+     * @param stepsList the list of steps whose status values are to be changed to status
+     * @param status the status value that all steps in stepsList should be changed to
+     */
     private void changeStatus(Step currentStep, List<String> stepsList, StepStatus status) {
         String currentStepName = currentStep.getTitel();
         for (String taskName : stepsList) {
@@ -355,6 +486,12 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         }
     }
 
+    /**
+     * change the user group of the input step
+     * 
+     * @param currentStep the step whose user group is to be changed
+     * @param userGroupChanges a map containing all changes regarding user groups
+     */
     private void changeUserGroups(Step currentStep, Map<String, List<String>> userGroupChanges) {
         String currentStepName = currentStep.getTitel();
         for (String taskName : userGroupChanges.keySet()) {
@@ -374,14 +511,22 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
                         currentStep.getBenutzergruppen().add(ug);
                     }
                 }
-                // StepManager.saveStep(currentStep);
             }
         }
     }
 
+    /**
+     * change all priority values of the steps of the process
+     * 
+     * @param process the Goobi process
+     * @param stepsLists lists of steps with different priority values
+     * @param priorityValues the list of priority values for the lists in stepsLists
+     */
     private void changeAllPriorities(Process process, List<List<String>> stepsLists, int[] priorityValues) {
         if (stepsLists.size() != priorityValues.length) {
             // error here since these two must match
+            log.error("The sizes of the input list and array do not match!");
+            return;
         }
         for (Step currentStep : process.getSchritteList()) {
             for (int i = 0; i < stepsLists.size(); ++i) {
@@ -390,6 +535,13 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         }
     }
 
+    /**
+     * change the priority value of the input step
+     * 
+     * @param currentStep the Step whose priority value is to be changed
+     * @param stepsList the list of steps whose priority values are to be changed to priority
+     * @param priority the priority value that all steps in stepsList should be changed to
+     */
     private void changePriority(Step currentStep, List<String> stepsList, int priority) {
         String currentStepName = currentStep.getTitel();
         for (String taskName : stepsList) {
@@ -399,6 +551,13 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         }
     }
 
+    /**
+     * save the process and apply changes on automatic steps
+     * 
+     * @param process the Goobi process
+     * @param automaticRunSteps the list of automatic steps
+     * @throws DAOException
+     */
     private void saveProcess(Process process, List<String> automaticRunSteps) throws DAOException {
         ProcessManager.saveProcess(process);
 
