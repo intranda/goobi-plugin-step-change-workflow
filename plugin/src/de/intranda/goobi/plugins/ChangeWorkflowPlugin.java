@@ -76,18 +76,15 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         // run through all configured changes
         for (HierarchicalConfiguration configChanges : changes) {
 
-            // load value via variable replacer
+            // 1.) check if property name is set and get its real value via VariableReplacer
             String variable = configChanges.getString("./propertyName");
-            String preferedValue = configChanges.getString("./propertyValue", "");
-            String condition = configChanges.getString("./propertyCondition", "is");
-
             log.debug("propertyName = " + variable);
-            log.debug("propertyValue = " + preferedValue);
-            log.debug("propertyCondition = " + condition);
+            if (StringUtils.isBlank(variable)) {
+                log.error("Cannot find property, abort");
+                return PluginReturnValue.ERROR;
+            }
 
             String realValue = null;
-
-            // read the real value from the variable replacer
             try {
                 realValue = getRealValue(process, variable);
 
@@ -96,86 +93,44 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
                 Helper.addMessageToProcessJournal(step.getProzess().getId(), LogType.ERROR, "error reading metadata file", "http step");
                 return PluginReturnValue.ERROR;
             }
-
             log.debug("realValue = " + realValue);
 
-            String processTemplateName = configChanges.getString("./workflow");
-            String projectName = configChanges.getString("./project");
-
-            log.debug("processTemplateName = " + processTemplateName);
-            log.debug("projectName = " + projectName);
-
-            List<String> stepsToOpen = Arrays.asList(configChanges.getStringArray("./steps[@type='open']/title"));
-            List<String> stepsToDeactivate = Arrays.asList(configChanges.getStringArray("./steps[@type='deactivate']/title"));
-            List<String> stepsToClose = Arrays.asList(configChanges.getStringArray("./steps[@type='close']/title"));
-            List<String> stepsToLock = Arrays.asList(configChanges.getStringArray("./steps[@type='lock']/title"));
-            List<String> stepsToRunAutomatic = Arrays.asList(configChanges.getStringArray("./steps[@type='run']/title"));
-
-            List<String> stepsWithPriorityStandard = Arrays.asList(configChanges.getStringArray("./priority[@value='0']/title"));
-            List<String> stepsWithPriorityHigh = Arrays.asList(configChanges.getStringArray("./priority[@value='1']/title"));
-            List<String> stepsWithPriorityHigher = Arrays.asList(configChanges.getStringArray("./priority[@value='2']/title"));
-            List<String> stepsWithPriorityHighest = Arrays.asList(configChanges.getStringArray("./priority[@value='3']/title"));
-            List<String> stepsWithPriorityCorrection = Arrays.asList(configChanges.getStringArray("./priority[@value='10']/title"));
-
-            Map<String, List<String>> userGroupChanges = new HashMap<>();
-            List<HierarchicalConfiguration> userGroupDefinition = configChanges.configurationsAt("./usergroups");
-            for (HierarchicalConfiguration def : userGroupDefinition) {
-                String stepTitle = def.getString("@step");
-                List<String> groups = Arrays.asList(def.getStringArray("usergroup"));
-                userGroupChanges.put(stepTitle, groups);
-            }
-
-            List<String> logError = Arrays.asList(configChanges.getStringArray("./log[@type='error']"));
-            List<String> logInfo = Arrays.asList(configChanges.getStringArray("./log[@type='info']"));
-            List<String> logUser = Arrays.asList(configChanges.getStringArray("./log[@type='user']"));
-            List<String> logDebug = Arrays.asList(configChanges.getStringArray("./log[@type='debug']"));
-            
-            // 1.) check if property name is set
-            if (StringUtils.isBlank(variable)) {
-                log.error("Cannot find property, abort");
-                return PluginReturnValue.ERROR;
-            }
-
             // 2.) check if property and value exist in process
+            String preferedValue = configChanges.getString("./propertyValue", "");
+            String condition = configChanges.getString("./propertyCondition", "is");
+
+            log.debug("propertyValue = " + preferedValue);
+            log.debug("propertyCondition = " + condition);
+
             boolean conditionMatches = checkCondition(condition, realValue, preferedValue);
             anyConditionMatched = anyConditionMatched || conditionMatches;
 
             log.debug("conditionMatches = " + conditionMatches);
             log.debug("anyConditionMatched = " + anyConditionMatched);
 
+            // 3.) run through tasks and apply the changes
             if (conditionMatches) {
                 // add new automatic steps
-                automaticRunSteps.addAll(stepsToRunAutomatic);
+                prepareAutomaticSteps(configChanges, automaticRunSteps);
 
                 // change process template
-                if (StringUtils.isNotBlank(processTemplateName)) {
-                    changeProcessTemplate(process, processTemplateName);
-                }
+                processProcessTemplate(process, configChanges);
 
                 // change project
-                if (StringUtils.isNotBlank(projectName)) {
-                    changeProject(process, projectName);
-                }
+                processProject(process, configChanges);
 
                 // add log entries into the journal (process log)
-                List<List<String>> logLists = Arrays.asList(logError, logInfo, logUser, logDebug);
-                LogType[] logTypeValues = new LogType[] { LogType.ERROR, LogType.INFO, LogType.USER, LogType.DEBUG };
-                addAllLogEntries(process, logLists, logTypeValues);
+                processLogs(process, configChanges);
 
-                // 3.) run through tasks and change the status
-                List<List<String>> stepsTypeLists = Arrays.asList(stepsToOpen, stepsToDeactivate, stepsToClose, stepsToLock);
-                StepStatus[] statusValues = new StepStatus[] { StepStatus.OPEN, StepStatus.DEACTIVATED, StepStatus.DONE, StepStatus.LOCKED };
-                changeAllStatus(process, stepsTypeLists, statusValues, userGroupChanges);
+                // run through tasks and change their status
+                processStepsStatus(process, configChanges);
                 
-                // run through tasks and change their priorties
-                List<List<String>> stepsPriorityLists = Arrays.asList(stepsWithPriorityStandard, stepsWithPriorityHigh, stepsWithPriorityHigher,
-                        stepsWithPriorityHighest, stepsWithPriorityCorrection);
-                int[] priorityValues = new int[] { 0, 1, 2, 3, 10 };
-                changeAllPriorities(process, stepsPriorityLists, priorityValues);
+                // run through tasks and change their priorities
+                processStepsPriority(process, configChanges);
             }
         }
 
-        // save the process if any change was done
+        // 4.) save the process if any change was done
         if (anyConditionMatched) {
             log.debug("anyConditionMatched = " + anyConditionMatched);
             try {
@@ -228,6 +183,20 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         }
     }
 
+    private void prepareAutomaticSteps(HierarchicalConfiguration configChanges, List<String> automaticRunSteps) {
+        List<String> stepsToRunAutomatic = getStepsGivenStatus(configChanges, "run");
+        automaticRunSteps.addAll(stepsToRunAutomatic);
+    }
+
+    private void processProcessTemplate(Process process, HierarchicalConfiguration configChanges) {
+        String processTemplateName = configChanges.getString("./workflow");
+        log.debug("processTemplateName = " + processTemplateName);
+
+        if (StringUtils.isNotBlank(processTemplateName)) {
+            changeProcessTemplate(process, processTemplateName);
+        }
+    }
+
     private void changeProcessTemplate(Process process, String processTemplateName) {
         log.debug("changing processTemplateName: " + processTemplateName);
         Process template = ProcessManager.getProcessByExactTitle(processTemplateName);
@@ -249,6 +218,15 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         }
     }
 
+    private void processProject(Process process, HierarchicalConfiguration configChanges) {
+        String projectName = configChanges.getString("./project");
+        log.debug("projectName = " + projectName);
+
+        if (StringUtils.isNotBlank(projectName)) {
+            changeProject(process, projectName);
+        }
+    }
+
     private void changeProject(Process process, String projectName) {
         log.debug("changing projectName: " + projectName);
         try {
@@ -264,14 +242,85 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         }
     }
 
+    private void processLogs(Process process, HierarchicalConfiguration configChanges) {
+        log.debug("processing logs");
+        List<String> logError = getLogsGivenType(configChanges, "error");
+        List<String> logInfo = getLogsGivenType(configChanges, "info");
+        List<String> logUser = getLogsGivenType(configChanges, "user");
+        List<String> logDebug = getLogsGivenType(configChanges, "debug");
+
+        List<List<String>> logLists = Arrays.asList(logError, logInfo, logUser, logDebug);
+        LogType[] logTypeValues = new LogType[] { LogType.ERROR, LogType.INFO, LogType.USER, LogType.DEBUG };
+        addAllLogEntries(process, logLists, logTypeValues);
+    }
+
+    private void processStepsStatus(Process process, HierarchicalConfiguration configChanges) {
+        log.debug("processing steps' status");
+        List<String> stepsToOpen = getStepsGivenStatus(configChanges, "open");
+        List<String> stepsToDeactivate = getStepsGivenStatus(configChanges, "deactivate");
+        List<String> stepsToClose = getStepsGivenStatus(configChanges, "close");
+        List<String> stepsToLock = getStepsGivenStatus(configChanges, "lock");
+
+        Map<String, List<String>> userGroupChanges = new HashMap<>();
+        List<HierarchicalConfiguration> userGroupDefinition = configChanges.configurationsAt("./usergroups");
+        for (HierarchicalConfiguration def : userGroupDefinition) {
+            String stepTitle = def.getString("@step");
+            List<String> groups = Arrays.asList(def.getStringArray("usergroup"));
+            userGroupChanges.put(stepTitle, groups);
+        }
+
+        List<List<String>> stepsTypeLists = Arrays.asList(stepsToOpen, stepsToDeactivate, stepsToClose, stepsToLock);
+        StepStatus[] statusValues = new StepStatus[] { StepStatus.OPEN, StepStatus.DEACTIVATED, StepStatus.DONE, StepStatus.LOCKED };
+        changeAllStatus(process, stepsTypeLists, statusValues, userGroupChanges);
+    }
+
+    private void processStepsPriority(Process process, HierarchicalConfiguration configChanges) {
+        log.debug("processing steps' priority");
+        List<String> stepsWithPriorityStandard = getStepsGivenPriority(configChanges, "0");
+        List<String> stepsWithPriorityHigh = getStepsGivenPriority(configChanges, "1");
+        List<String> stepsWithPriorityHigher = getStepsGivenPriority(configChanges, "2");
+        List<String> stepsWithPriorityHighest = getStepsGivenPriority(configChanges, "3");
+        List<String> stepsWithPriorityCorrection = getStepsGivenPriority(configChanges, "10");
+
+        List<List<String>> stepsPriorityLists = Arrays.asList(stepsWithPriorityStandard, stepsWithPriorityHigh, stepsWithPriorityHigher,
+                stepsWithPriorityHighest, stepsWithPriorityCorrection);
+        int[] priorityValues = new int[] { 0, 1, 2, 3, 10 };
+        changeAllPriorities(process, stepsPriorityLists, priorityValues);
+    }
+
+    private List<String> getStepsGivenStatus(HierarchicalConfiguration configChanges, String statusValue) {
+        String tagName = "steps";
+        String attributeName = "type";
+        String option = "title";
+        return getChangesWithProperty(configChanges, tagName, attributeName, statusValue, option);
+    }
+
+    private List<String> getStepsGivenPriority(HierarchicalConfiguration configChanges, String priority) {
+        String tagName = "priority";
+        String attributeName = "value";
+        String option = "title";
+        return getChangesWithProperty(configChanges, tagName, attributeName, priority, option);
+    }
+
+    private List<String> getLogsGivenType(HierarchicalConfiguration configChanges, String typeValue) {
+        String tagName = "log";
+        String attributeName = "type";
+        String option = "";
+        return getChangesWithProperty(configChanges, tagName, attributeName, typeValue, option);
+    }
+
+    private List<String> getChangesWithProperty(HierarchicalConfiguration configChanges, String tagName, String attributeName, String attributeValue,
+            String option) {
+        String changePath = "./" + tagName + "[@" + attributeName + "='" + attributeValue + "']" + (StringUtils.isBlank(option) ? "" : "/" + option);
+        return Arrays.asList(configChanges.getStringArray(changePath));
+    }
+
     private void addAllLogEntries(Process process, List<List<String>> logLists, LogType[] logTypeValues) {
         if (logLists.size() != logTypeValues.length) {
             // error here since these two must match
         }
-        int count = 0;
-        for (List<String> logList : logLists) {
-            addLogEntries(process, logList, logTypeValues[count]);
-            ++count;
+        for (int i = 0; i < logLists.size(); ++i) {
+            addLogEntries(process, logLists.get(i), logTypeValues[i]);
         }
     }
 
@@ -288,10 +337,8 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         }
         for (Step currentStep : process.getSchritteList()) {
             // change step status
-            int count = 0;
-            for (List<String> stepsList : stepsLists) {
-                changeStatus(currentStep, stepsList, statusValues[count]);
-                ++count;
+            for (int i = 0; i < stepsLists.size(); ++i) {
+                changeStatus(currentStep, stepsLists.get(i), statusValues[i]);
             }
 
             // change user groups 
@@ -337,10 +384,8 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
             // error here since these two must match
         }
         for (Step currentStep : process.getSchritteList()) {
-            int count = 0;
-            for (List<String> stepsList : stepsLists) {
-                changePriority(currentStep, stepsList, priorityValues[count]);
-                ++count;
+            for (int i = 0; i < stepsLists.size(); ++i) {
+                changePriority(currentStep, stepsLists.get(i), priorityValues[i]);
             }
         }
     }
@@ -392,4 +437,5 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
     public int getInterfaceVersion() {
         return 1;
     }
+
 }
