@@ -37,10 +37,10 @@
 			<steps type="lock">
 				<title>Automatic export to Islandora</title>
 			</steps>
-             <!-- list of automatic steps to run -->
-            <steps type="run">
-                <title>Create derivates</title>
-            </steps>
+			<!-- list of automatic steps to run -->
+			<steps type="run">
+				<title>Create derivates</title>
+			</steps>
 
 			<usergroups step="Image QA">
 				<usergroup>Administration</usergroup>
@@ -51,6 +51,32 @@
 			<log type="info">My info message</log>
 			<log type="error">My error message</log>
 			<log type="user">My user message</log>
+			
+			<!-- list of steps of priority 0 (standard) -->
+			<priority value="0">
+				<title>Some standard step</title>
+			</priority>
+			
+			<!-- list of steps of priority 1 (high) -->
+			<priority value="1">
+				<title>Step of high priority</title>
+			</priority>
+			
+			<!-- list of steps of priority 2 (higher) -->
+			<priority value="2">
+				<title>Step of higher priority</title>
+			</priority>
+			
+			<!-- list of steps of priority 3 (highest) -->
+			<priority value="3">
+				<title>Step of highest priority</title>
+				<title>another step of highest priority</title>
+			</priority>
+			
+			<!-- list of steps of priority 10 (correction) -->
+			<priority value="10">
+				<title></title>
+			</priority>
 			
 		</change>
 	</config>
@@ -87,31 +113,31 @@
 				<title>Create METS file</title>
 				<title>Ingest into DigiTool</title>
 			</steps>
-            <!-- list of automatic steps to run -->
-            <steps type="run">
-                <title>Create derivates</title>
-            </steps>
+			<!-- list of automatic steps to run -->
+			<steps type="run">
+				<title>Create derivates</title>
+			</steps>
 		</change>
 	</config>
 
-    <!-- change process template -->
-    <config>
-        <!-- which projects to use for (can be more then one, otherwise use *) -->
-        <project>Archive_Project</project>
-        <step>Check process template change</step>
+	<!-- change process template -->
+	<config>
+		<!-- which projects to use for (can be more then one, otherwise use *) -->
+		<project>Archive_Project</project>
+		<step>Check process template change</step>
 
-        <!-- multiple changes can be done within one configuration rule; simply add another 'change' element with other properties here -->
-        <change>
-            <!-- name of the property or metadata to check: please take care to use the syntax of the Variable replacer here -->
-            <propertyName>{process.TemplateID}</propertyName>
-            <!-- expected value (can be blank too) -->
-            <propertyValue>309919</propertyValue>
-            <!-- condition for value comparing, can be 'is' or 'not' or 'missing' or 'available' -->
-            <propertyCondition>is</propertyCondition>
-            <!-- Name of the new process template -->
-            <workflow>Manuscript workflow</workflow>
-            <project></project>
-        </change>
-    </config>
+		<!-- multiple changes can be done within one configuration rule; simply add another 'change' element with other properties here -->
+		<change>
+			<!-- name of the property or metadata to check: please take care to use the syntax of the Variable replacer here -->
+			<propertyName>{process.TemplateID}</propertyName>
+			<!-- expected value (can be blank too) -->
+			<propertyValue>309919</propertyValue>
+			<!-- condition for value comparing, can be 'is' or 'not' or 'missing' or 'available' -->
+			<propertyCondition>is</propertyCondition>
+			<!-- Name of the new process template -->
+ 			<workflow>Manuscript workflow</workflow>
+			<project></project>
+		</change>
+	</config>
 
 </config_plugin>
