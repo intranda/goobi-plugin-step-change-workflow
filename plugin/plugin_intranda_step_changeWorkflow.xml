@@ -52,6 +52,8 @@
 			<log type="error">My error message</log>
 			<log type="user">My user message</log>
 			
+			<!-- If any title under priority is configured with a *, then this priority value will be applied to all steps of this process. -->
+			<!-- If more than two titles are configured with *, then the first match in the order of values 0, 1, 2, 3, 10 will be used. -->
 			<!-- list of steps of priority 0 (standard) -->
 			<priority value="0">
 				<title>Some standard step</title>

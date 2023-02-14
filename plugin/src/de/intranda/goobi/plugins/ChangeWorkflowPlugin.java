@@ -352,6 +352,17 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         List<List<String>> stepsPriorityLists = Arrays.asList(stepsWithPriorityStandard, stepsWithPriorityHigh, stepsWithPriorityHigher,
                 stepsWithPriorityHighest, stepsWithPriorityCorrection);
         int[] priorityValues = new int[] { 0, 1, 2, 3, 10 };
+
+        // check if there is any * in the configured steps
+        for (int i = 0; i < priorityValues.length; ++i) {
+            for (String s : stepsPriorityLists.get(i)) {
+                if (s.equals("*")) {
+                    changeAllPriorities(process, priorityValues[i]);
+                    return;
+                }
+            }
+        }
+        // no * found
         changeAllPriorities(process, stepsPriorityLists, priorityValues);
     }
 
@@ -512,6 +523,18 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * change all steps of the process to the same priority value
+     * 
+     * @param process the Goobi process
+     * @param priority the priority value for all the steps in this process
+     */
+    private void changeAllPriorities(Process process, int priority) {
+        for (Step step : process.getSchritteList()) {
+            step.setPrioritaet(priority);
         }
     }
 
