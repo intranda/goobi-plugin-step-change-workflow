@@ -48,6 +48,8 @@ import ugh.exceptions.ReadException;
 @Log4j
 public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
 
+    private static final long serialVersionUID = 6166419150436281452L;
+
     private Step step;
     private Process process;
 
@@ -72,7 +74,7 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
     public PluginReturnValue run() {
         boolean anyConditionMatched = false;
         List<String> automaticRunSteps = new ArrayList<>();
-
+        boolean currentStepIsChanged = false;
         // run through all configured changes
         for (HierarchicalConfiguration configChanges : changes) {
 
@@ -123,8 +125,8 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
                 processLogs(process, configChanges);
 
                 // run through tasks and change their status
-                processStepsStatus(process, configChanges);
-                
+                currentStepIsChanged = processStepsStatus(process, configChanges);
+
                 // run through tasks and change their priorities
                 processStepsPriority(process, configChanges);
             }
@@ -140,8 +142,11 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
                 return PluginReturnValue.ERROR;
             }
         }
-
-        return PluginReturnValue.FINISH;
+        if (!currentStepIsChanged) {
+            return PluginReturnValue.FINISH;
+        } else {
+            return PluginReturnValue.WAIT;
+        }
     }
 
     /**
@@ -185,7 +190,7 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
     private boolean checkCondition(String condition, String realValue, String preferedValue) {
         log.debug("checking condition: " + condition);
         switch (condition) {
-            case "missing": 
+            case "missing":
                 return realValue == null || realValue.trim().equals("");
 
             case "available":
@@ -315,7 +320,7 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
      * @param process the Goobi process
      * @param configChanges used to get the newly configured steps with their status values
      */
-    private void processStepsStatus(Process process, HierarchicalConfiguration configChanges) {
+    private boolean processStepsStatus(Process process, HierarchicalConfiguration configChanges) {
         log.debug("processing steps' status");
         List<String> stepsToOpen = getStepsGivenStatus(configChanges, "open");
         List<String> stepsToDeactivate = getStepsGivenStatus(configChanges, "deactivate");
@@ -333,6 +338,9 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         List<List<String>> stepsTypeLists = Arrays.asList(stepsToOpen, stepsToDeactivate, stepsToClose, stepsToLock);
         StepStatus[] statusValues = new StepStatus[] { StepStatus.OPEN, StepStatus.DEACTIVATED, StepStatus.DONE, StepStatus.LOCKED };
         changeAllStatus(process, stepsTypeLists, statusValues, userGroupChanges);
+
+        return stepsToOpen.contains(step.getTitel()) || stepsToDeactivate.contains(step.getTitel()) || stepsToClose.contains(step.getTitel())
+                || stepsToLock.contains(step.getTitel());
     }
 
     /**
@@ -451,7 +459,7 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
      */
     private void addLogEntries(Process process, List<String> logList, LogType logType) {
         for (String s : logList) {
-            Helper.addMessageToProcessLog(process.getId(), logType, s);
+            Helper.addMessageToProcessJournal(process.getId(), logType, s);
         }
     }
 
@@ -476,7 +484,7 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
                 changeStatus(currentStep, stepsLists.get(i), statusValues[i]);
             }
 
-            // change user groups 
+            // change user groups
             changeUserGroups(currentStep, userGroupChanges);
         }
     }
@@ -533,8 +541,8 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
      * @param priority the priority value for all the steps in this process
      */
     private void changeAllPriorities(Process process, int priority) {
-        for (Step step : process.getSchritteList()) {
-            step.setPrioritaet(priority);
+        for (Step s : process.getSchritteList()) {
+            s.setPrioritaet(priority);
         }
     }
 
