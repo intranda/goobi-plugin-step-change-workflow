@@ -142,4 +142,15 @@
 		</change>
 	</config>
 
+
+
+    <config>
+        <project>Duplication_Test</project>
+        <step>ChangeWorkflowTest</step>
+        <change type="checkDuplicates">
+            <metadata>SharedThesisId</metadata>
+            <workflow>MassImportTest</workflow>
+        </change>
+    </config>
+
 </config_plugin>

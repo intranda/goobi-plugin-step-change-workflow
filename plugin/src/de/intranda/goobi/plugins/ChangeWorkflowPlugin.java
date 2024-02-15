@@ -1,6 +1,8 @@
 package de.intranda.goobi.plugins;
 
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -10,6 +12,7 @@ import java.util.Map;
 
 import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.commons.configuration.SubnodeConfiguration;
+import org.apache.commons.dbutils.QueryRunner;
 import org.apache.commons.lang.StringUtils;
 import org.goobi.beans.Process;
 import org.goobi.beans.Project;
@@ -30,6 +33,7 @@ import de.sub.goobi.helper.VariableReplacer;
 import de.sub.goobi.helper.enums.StepStatus;
 import de.sub.goobi.helper.exceptions.DAOException;
 import de.sub.goobi.helper.exceptions.SwapException;
+import de.sub.goobi.persistence.managers.MySQLHelper;
 import de.sub.goobi.persistence.managers.ProcessManager;
 import de.sub.goobi.persistence.managers.ProjectManager;
 import de.sub.goobi.persistence.managers.StepManager;
@@ -38,10 +42,13 @@ import lombok.Data;
 import lombok.extern.log4j.Log4j;
 import net.xeoh.plugins.base.annotations.PluginImplementation;
 import ugh.dl.DigitalDocument;
+import ugh.dl.DocStruct;
 import ugh.dl.Fileformat;
+import ugh.dl.Metadata;
 import ugh.dl.Prefs;
 import ugh.exceptions.PreferencesException;
 import ugh.exceptions.ReadException;
+import ugh.exceptions.UGHException;
 
 @PluginImplementation
 @Data
@@ -77,38 +84,46 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         boolean currentStepIsChanged = false;
         // run through all configured changes
         for (HierarchicalConfiguration configChanges : changes) {
+            String conditionType = configChanges.getString("@type", "property"); // get it from config
 
-            // 1.) check if property name is set and get its real value via VariableReplacer
-            String variable = configChanges.getString("./propertyName");
-            log.debug("propertyName = " + variable);
-            if (StringUtils.isBlank(variable)) {
-                log.error("Cannot find property, abort");
-                return PluginReturnValue.ERROR;
+            boolean conditionMatches = false;
+
+            switch (conditionType) {
+                case "property":
+                    conditionMatches = checkPropertyConditions(configChanges);
+                    break;
+                case "checkDuplicates":
+                    // check if configured metadata exists in current process
+                    String metadataType = configChanges.getString("/metadata");
+
+                    try {
+                        String value = getMetadataValue(process, metadataType);
+                        if (StringUtils.isBlank(value)) {
+                            conditionMatches = false;
+                        } else {
+                            // check if other processes with configured metadata exist
+                            List<Integer> sharedIdList = getAllProcessesWithExactMetadata(metadataType, value);
+                            sharedIdList.remove(process.getId());
+                            // check if any of the other processes has already finished the current step
+                            if (sharedIdList.isEmpty()) {
+                                conditionMatches = false;
+                            } else {
+                                List<Integer> stepStatusList = getStepStatus(sharedIdList, step.getTitel());
+                                // if yes, change workflow
+                                if (stepStatusList.contains(3)) {
+                                    conditionMatches = true;
+                                }
+                            }
+                        }
+                    } catch (SQLException e) {
+                        log.error(e);
+                    }
+                    break;
+                default:
+                    break;
             }
 
-            String realValue = null;
-            try {
-                realValue = getRealValue(process, variable);
-
-            } catch (Exception e2) {
-                log.error("An exception occurred while reading the metadata file for process with ID " + step.getProcessId(), e2);
-                Helper.addMessageToProcessJournal(step.getProzess().getId(), LogType.ERROR, "error reading metadata file", "http step");
-                return PluginReturnValue.ERROR;
-            }
-            log.debug("realValue = " + realValue);
-
-            // 2.) check if property and value exist in process
-            String preferedValue = configChanges.getString("./propertyValue", "");
-            String condition = configChanges.getString("./propertyCondition", "is");
-
-            log.debug("propertyValue = " + preferedValue);
-            log.debug("propertyCondition = " + condition);
-
-            boolean conditionMatches = checkCondition(condition, realValue, preferedValue);
             anyConditionMatched = anyConditionMatched || conditionMatches;
-
-            log.debug("conditionMatches = " + conditionMatches);
-            log.debug("anyConditionMatched = " + anyConditionMatched);
 
             // 3.) run through tasks and apply the changes
             if (conditionMatches) {
@@ -149,6 +164,40 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         }
     }
 
+    private boolean checkPropertyConditions(HierarchicalConfiguration configChanges) {
+        // 1.) check if property name is set and get its real value via VariableReplacer
+        String variable = configChanges.getString("./propertyName");
+        log.debug("propertyName = " + variable);
+        if (StringUtils.isBlank(variable)) {
+            log.error("Cannot find property, abort");
+            return false;
+        }
+
+        String realValue = null;
+        try {
+            realValue = getRealValue(process, variable);
+
+        } catch (Exception e2) {
+            log.error("An exception occurred while reading the metadata file for process with ID " + step.getProcessId(), e2);
+            Helper.addMessageToProcessJournal(step.getProzess().getId(), LogType.ERROR, "error reading metadata file", "http step");
+            return false;
+        }
+        log.debug("realValue = " + realValue);
+
+        // 2.) check if property and value exist in process
+        String preferedValue = configChanges.getString("./propertyValue", "");
+        String condition = configChanges.getString("./propertyCondition", "is");
+
+        log.debug("propertyValue = " + preferedValue);
+        log.debug("propertyCondition = " + condition);
+
+        boolean conditionMatches = checkCondition(condition, realValue, preferedValue);
+
+        log.debug("conditionMatches = " + conditionMatches);
+
+        return conditionMatches;
+    }
+
     /**
      * use VariableReplacer to get the real value of the given Goobi variable
      * 
@@ -179,6 +228,26 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         return realValue;
     }
 
+    private String getMetadataValue(Process process, String variable) {
+        String value = "";
+        try {
+            Fileformat ff = process.readMetadataFile();
+            DigitalDocument dd = ff.getDigitalDocument();
+            DocStruct logical = dd.getLogicalDocStruct();
+
+            for (Metadata md : logical.getAllMetadata()) {
+                if (md.getType().getName().equals(variable)) {
+                    return md.getValue();
+                }
+            }
+
+        } catch (UGHException | IOException | SwapException e) {
+            log.error(e);
+        }
+
+        return value;
+    }
+
     /**
      * check if the real value satisfies for the given condition
      * 
@@ -191,10 +260,10 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         log.debug("checking condition: " + condition);
         switch (condition) {
             case "missing":
-                return realValue == null || realValue.trim().equals("");
+                return realValue == null || "".equals(realValue.trim());
 
             case "available":
-                return realValue != null && !realValue.trim().equals("");
+                return realValue != null && !"".equals(realValue.trim());
 
             case "is":
                 return realValue != null && realValue.trim().equals(preferedValue);
@@ -364,7 +433,7 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
         // check if there is any * in the configured steps
         for (int i = 0; i < priorityValues.length; ++i) {
             for (String s : stepsPriorityLists.get(i)) {
-                if (s.equals("*")) {
+                if ("*".equals(s)) {
                     changeAllPriorities(process, priorityValues[i]);
                     return;
                 }
@@ -620,12 +689,46 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
 
     @Override
     public HashMap<String, StepReturnValue> validate() {
-        return null;
+        return null; // NOSONAR
     }
 
     @Override
     public int getInterfaceVersion() {
         return 1;
+    }
+
+    private static List<Integer> getAllProcessesWithExactMetadata(String name, String value) throws SQLException {
+        String sql = "SELECT processid FROM metadata WHERE name = ? and value = ?";
+        Connection connection = null;
+        try {
+            connection = MySQLHelper.getInstance().getConnection();
+            return new QueryRunner().query(connection, sql, MySQLHelper.resultSetToIntegerListHandler, name, value);
+        } finally {
+            if (connection != null) {
+                MySQLHelper.closeConnection(connection);
+            }
+        }
+    }
+
+    private static List<Integer> getStepStatus(List<Integer> processids, String stepName) throws SQLException {
+        StringBuilder sb = new StringBuilder();
+        for (Integer id : processids) {
+            if (sb.length() > 0) {
+                sb.append(", ");
+            }
+            sb.append(id);
+        }
+
+        String sql = "select distinct Bearbeitungsstatus from schritte where prozesseid in (" + sb.toString() + ") and titel = ?";
+        Connection connection = null;
+        try {
+            connection = MySQLHelper.getInstance().getConnection();
+            return new QueryRunner().query(connection, sql, MySQLHelper.resultSetToIntegerListHandler, stepName);
+        } finally {
+            if (connection != null) {
+                MySQLHelper.closeConnection(connection);
+            }
+        }
     }
 
 }
