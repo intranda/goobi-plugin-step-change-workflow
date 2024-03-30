@@ -80,6 +80,13 @@
 				<title></title>
 			</priority>
 			
+			<!-- list of properties to be changed or deleted -->
+			<properties>
+				<property name="My property" value="My value" />
+				<property name="My boolean property" value="true" />
+				<property name="My property to be deleted" delete="true" />
+			</properties>
+			
 		</change>
 	</config>
 
@@ -119,6 +126,7 @@
 			<steps type="run">
 				<title>Create derivates</title>
 			</steps>
+			
 		</change>
 	</config>
 
