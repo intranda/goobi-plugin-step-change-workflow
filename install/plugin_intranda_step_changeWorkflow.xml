@@ -161,4 +161,21 @@
         </change>
     </config>
 
+    <!-- check whether a master anchor data record exists for the current identifier -->
+    <config>
+        <project>*</project>
+        <step>master anchor check</step>
+
+        <change type="search">
+            <!-- exists: true if at least one process matches the search query -->
+            <!-- not exists: true if no process matches the search query -->
+            <condition>exists</condition>
+            <!-- search query, can include the usual variables -->
+            <query>(prozesse.ProzesseID in (select distinct processid from metadata where name = 'InternalNote' and value = 'AnchorMaster')) AND (prozesse.ProzesseID in (select distinct processid from metadata where name = 'CatalogIDDigital' and value = '{meta.topstruct.CatalogIDDigital}'))</query>
+
+
+            <!-- Name of the new process template -->
+            <workflow>Manuscript workflow</workflow>
+        </change>
+    </config>
 </config_plugin>
