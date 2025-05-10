@@ -30,154 +30,11 @@ After the plugin has been installed and configured, it can be configured in the 
 
 
 ## Configuration
-The following is a sample configuration with comments:
+The plugin is configured in the file `plugin_intranda_step_changeWorkflow.xml` as shown here:
 
-```xml
-<config_plugin>
-    <!--
-        order of configuration is: 
-        1.) project name and step name matches 
-        2.) step name matches and project is * 
-        3.) project name matches and step name is * 
-        4.) project name and step name are * 
-    -->
+{{CONFIG_CONTENT}}
 
-    <config>
-        <!-- which projects to use for (can be more then one, otherwise use *) -->
-        <project>Register</project>
-        <step>Check</step>
-
-        <!-- multiple changes can be done within one configuration rule; simply add another 'change' element with other properties here -->
-        <change>
-            <!-- name of the property or metadata to check: please take care to use the syntax of the Variable replacer here -->
-            <propertyName>{process.TemplateID}</propertyName>
-            <!-- expected value (can be blank too) -->
-            <propertyValue>183</propertyValue>
-            <!-- condition for value comparing, can be 'is' or 'not' or 'missing' or 'available' -->
-            <propertyCondition>is</propertyCondition>
-            <!-- list of steps to open, if property value matches -->
-            <steps type="open">
-                <title>Box preparation</title>
-            </steps>
-            <!-- list of steps to deactivate -->
-            <steps type="deactivate">
-                <title>Image QA</title>
-            </steps>
-            <!-- list of steps to close -->
-            <steps type="close">
-                <title>Automatic LayoutWizzard Cropping</title>
-                <title>LayoutWizzard: Manual confirmation</title>
-            </steps>
-            <!-- list of steps to lock -->
-            <steps type="lock">
-                <title>Automatic export to Islandora</title>
-            </steps>
-		
-            <!-- If any title under priority is configured with a *, then this priority value will be applied to all steps of this process. -->
-            <!-- If more than two titles are configured with *, then the first match in the order of values 0, 1, 2, 3, 10 will be used. -->
-            <!-- list of steps of priority 0 (standard) -->
-            <priority value="0">
-                <title>Some standard step</title>
-            </priority>
-			
-            <!-- list of steps of priority 1 (priority) -->
-            <priority value="1">
-                <title>Step of priority</title>
-            </priority>
-			
-            <!-- list of steps of priority 2 (high priority) -->
-            <priority value="2">
-                <title>Step of high priority</title>
-            </priority>
-
-            <!-- list of steps of priority 3 (highest priority) -->
-            <priority value="3">
-                <title>Step of highest priority</title>
-                <title>another step of highest priority</title>
-            </priority>
-			
-            <!-- list of steps of priority 10 (correction) -->
-            <priority value="10">
-                <title></title>
-            </priority>
-
-            <usergroups step="Image QA">
-                <usergroup>Administration</usergroup>
-                <usergroup>AutomaticTasks</usergroup>
-            </usergroups>
-        </change>
-    </config>
-
-    <config>
-        <!-- which projects to use for (can be more then one, otherwise use *) -->
-        <project>*</project>
-        <step>*</step>
-
-        <!-- multiple changes can be done within one configuration rule; simply add another 'change' element with other properties here -->
-        <change>
-            <!-- name of the property or metadata to check: please take care to use the syntax of the Variable replacer here -->
-            <propertyName>{process.upload to digitool}</propertyName>
-            <!-- expected value (can be blank too) -->
-            <propertyValue>No</propertyValue>
-            <!-- condition for value comparing, can be 'is' or 'not' or 'missing' or 'available' -->
-            <propertyCondition>is</propertyCondition>
-            <!-- list of steps to open, if property value matches -->
-            <steps type="open">
-                <title>Create derivates</title>
-                <title>Jpeg 2000 generation and validation</title>
-            </steps>
-            <!-- list of steps to deactivate -->
-            <steps type="deactivate">
-                <title>Rename files</title>
-            </steps>
-            <!-- list of steps to close -->
-            <steps type="close">
-                <title>Upload raw tiffs to uploaddirectory Socrates</title>
-                <title>Automatic pagination</title>
-            </steps>
-            <!-- list of steps to lock -->
-            <steps type="lock">
-                <title>Create METS file</title>
-                <title>Ingest into DigiTool</title>
-            </steps>
-        </change>
-    </config>
-
-    <config>
-        <!-- which projects to use for (can be more then one, otherwise use *) -->
-        <project>Archive_Project</project>
-        <step>Check process template change</step>
-
-        <!-- multiple changes can be done within one configuration rule; simply add another 'change' element with other properties here -->
-        <change>
-            <!-- name of the property or metadata to check: please take care to use the syntax of the Variable replacer here -->
-            <propertyName>{process.TemplateID}</propertyName>
-            <!-- expected value (can be blank too) -->
-            <propertyValue>309919</propertyValue>
-            <!-- condition for value comparing, can be 'is' or 'not' or 'missing' or 'available' -->
-            <propertyCondition>is</propertyCondition>
-            <!-- Name of the new process template -->
-            <workflow>Manuscript workflow</workflow>
-
-            <!-- write a message into the journal (aka process log) -->
-			<log type="info">My info message</log>
-			<log type="error">My error message</log>
-			<log type="user">My user message</log>
-			<log type="debug">My debug message</log>
-        </change>
-    </config>
-</config_plugin>
-```
-
-Each `config` block is responsible for a certain project and a certain step, whereby wildcards `*` and multiple answers of processes or steps are also possible. If a step in the workflow is executed with this plugin, the system searches for a `config` block that matches the currently opened step. For example, if in the project "PDF Digitization" the step with the title "Change workflow after PDF extraction" is configured and executed with this plugin, the plugin looks for a `config` block that looks like this:
-
-```xml
-<config>
-    <project>PDF Digitization</project>
-    <step>Change workflow after PDF extraction</step>
-    [...]
-</config>
-```
+{{CONFIG_DESCRIPTION_PROJECT_STEP}}
 
 In each `<change>` element it is then configured which process property is checked (`<propertyName>`) and which value is expected (`<propertyValue>`). Please note that the specification for defining which property is to be used for checking a value must be specified with the syntax for the so-called variable replacer. Accordingly, when defining the field to be checked, the specification must be as in the following examples:
 
@@ -191,7 +48,27 @@ In each `<change>` element it is then configured which process property is check
 
 Further explanations about the use of variables can be found here:
 
-[https://docs.goobi.io/goobi-workflow-en/manager/8](https://docs.goobi.io/goobi-workflow-en/manager/8)
+[https://docs.goobi.io/goobi-workflow/en/manager/07_variables](https://docs.goobi.io/goobi-workflow/en/manager/07_variables)
+
+If a property and the value to be checked have been named, the condition that must be fulfilled in order to apply the plugin is evaluated.
+
+```xml
+<!-- name of the property or metadata to check: please take care to use the syntax of the Variable replacer here -->
+<propertyName>{process.TemplateID}</propertyName>
+<!-- expected value (can be blank too) -->
+<propertyValue>183</propertyValue>
+<!-- condition for value comparing, can be 'is' or 'not' or 'missing' or 'available' -->
+<propertyCondition>is</propertyCondition>
+```
+
+The check always assumes that the property to be checked only exists once and would use the first property found with the name for the check if there are several properties with the same name. The value is then checked using the specified `propertyCondition`.:
+
+| Parameter value | Explanation |
+| :--- | :--- |
+| `is`  | The content of the property corresponds exactly to the configured value. |
+| `not` | The content of the property does not correspond exactly to the configured value. |
+| `missing` | The property is not available. |
+| `available` | A property with this name exists, regardless of its content. |
 
 After defining how the properties are to be evaluated, the action to be performed is determined. The following possibilities exist here:
 
