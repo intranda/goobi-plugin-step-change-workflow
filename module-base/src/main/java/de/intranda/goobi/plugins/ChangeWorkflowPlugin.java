@@ -15,6 +15,7 @@ import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.commons.configuration.SubnodeConfiguration;
 import org.apache.commons.dbutils.QueryRunner;
 import org.apache.commons.lang.StringUtils;
+import org.goobi.beans.GoobiProperty;
 import org.goobi.beans.Process;
 import org.goobi.beans.Processproperty;
 import org.goobi.beans.Project;
@@ -414,20 +415,20 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
 
             // if property shall be deleted
             if (delete) {
-                for (Processproperty pp : process.getEigenschaften()) {
+                for (GoobiProperty pp : process.getEigenschaften()) {
                     if (pp.getTitel().equals(name)) {
-                        PropertyManager.deleteProcessProperty(pp);
+                        PropertyManager.deleteProperty(pp);
                         break;
                     }
                 }
             } else {
                 // if property shall get a new value
                 boolean matched = false;
-                for (Processproperty pp : process.getEigenschaften()) {
+                for (GoobiProperty pp : process.getEigenschaften()) {
                     if (pp.getTitel().equals(name)) {
                         pp.setWert(value);
-                        pp.setProcessId(process.getId());
-                        PropertyManager.saveProcessProperty(pp);
+                        pp.setOwner(process);
+                        PropertyManager.saveProperty(pp);
                         matched = true;
                         break;
                     }
