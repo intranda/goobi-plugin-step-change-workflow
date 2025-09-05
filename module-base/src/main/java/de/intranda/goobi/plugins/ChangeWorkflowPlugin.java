@@ -303,7 +303,8 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
 
             case "not":
                 return realValue == null || !realValue.trim().equals(preferedValue);
-
+            case "matches":
+                return realValue != null && realValue.matches(preferedValue);
             default:
                 return false;
         }
