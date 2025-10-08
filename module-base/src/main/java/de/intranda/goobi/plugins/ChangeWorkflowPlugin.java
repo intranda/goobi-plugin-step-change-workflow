@@ -14,10 +14,10 @@ import java.util.Map.Entry;
 import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.commons.configuration.SubnodeConfiguration;
 import org.apache.commons.dbutils.QueryRunner;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.goobi.beans.GoobiProperty;
+import org.goobi.beans.GoobiProperty.PropertyOwnerType;
 import org.goobi.beans.Process;
-import org.goobi.beans.Processproperty;
 import org.goobi.beans.Project;
 import org.goobi.beans.Step;
 import org.goobi.beans.Usergroup;
@@ -284,25 +284,28 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
     /**
      * check if the real value satisfies for the given condition
      * 
-     * @param condition options are "missing" "available" "is" and "not", any other inputs would just trigger a false to return
+     * @param condition options are "missing" "available" "is" and "not", "matches", any other inputs would just trigger a false to return
      * @param realValue
-     * @param preferedValue used for conditions "is" and "not"
+     * @param preferedValue used for conditions "is" and "not" and "matches"
      * @return true if the real value input satisfies for the given condition, false otherwise
      */
     private boolean checkCondition(String condition, String realValue, String preferedValue) {
         log.debug("checking condition: " + condition);
         switch (condition) {
             case "missing":
-                return realValue == null || "".equals(realValue.trim());
+                return StringUtils.isBlank(realValue);
 
             case "available":
-                return realValue != null && !"".equals(realValue.trim());
+                return StringUtils.isNotBlank(realValue);
 
             case "is":
-                return realValue != null && realValue.trim().equals(preferedValue);
+                return StringUtils.isNotBlank(realValue) && realValue.trim().equals(preferedValue);
 
             case "not":
-                return realValue == null || !realValue.trim().equals(preferedValue);
+                return StringUtils.isBlank(realValue) || !realValue.trim().equals(preferedValue);
+
+            case "matches":
+                return StringUtils.isNotBlank(realValue) && realValue.matches(preferedValue);
 
             default:
                 return false;
@@ -416,7 +419,7 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
             // if property shall be deleted
             if (delete) {
                 for (GoobiProperty pp : process.getEigenschaften()) {
-                    if (pp.getTitel().equals(name)) {
+                    if (pp.getPropertyName().equals(name)) {
                         PropertyManager.deleteProperty(pp);
                         break;
                     }
@@ -425,8 +428,8 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
                 // if property shall get a new value
                 boolean matched = false;
                 for (GoobiProperty pp : process.getEigenschaften()) {
-                    if (pp.getTitel().equals(name)) {
-                        pp.setWert(value);
+                    if (pp.getPropertyName().equals(name)) {
+                        pp.setPropertyValue(value);
                         pp.setOwner(process);
                         PropertyManager.saveProperty(pp);
                         matched = true;
@@ -434,11 +437,11 @@ public class ChangeWorkflowPlugin implements IStepPluginVersion2 {
                     }
                 }
                 if (!matched) {
-                    Processproperty pp = new Processproperty();
-                    pp.setTitel(name);
-                    pp.setWert(value);
-                    pp.setProzess(process);
-                    PropertyManager.saveProcessProperty(pp);
+                    GoobiProperty pp = new GoobiProperty(PropertyOwnerType.PROCESS);
+                    pp.setPropertyName(name);
+                    pp.setPropertyValue(value);
+                    pp.setOwner(process);
+                    PropertyManager.saveProperty(pp);
                 }
             }
         }
