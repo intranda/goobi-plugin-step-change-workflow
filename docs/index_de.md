@@ -3,6 +3,10 @@ title: Ändern des Workflows auf Grundlage von Vorgangseigenschaften
 identifier: intranda_step_changeWorkflow
 published: true
 description: Dies ist die technische Dokumentation für das Goobi-Plugin für das automatische Ändern von Workflows auf Grundlage von Vorgangseigenschaften.
+keywords:
+    - Goobi workflow
+    - Plugin
+    - Step Plugin
 ---
 ## Einführung
 Die vorliegende Dokumentation beschreibt die Installation, Konfiguration und den Einsatz eines Plugins zum automatischen Ändern von Workflows zur Laufzeit. Das Plugin kann (je nach Konfiguration) Schritte öffnen, schließen oder deaktivieren. Benutzergruppen können zugwiesen werden und auch Produktionsvorlagen vollständig getauscht werden. Die Entscheidung, was jeweils genau geschehen soll, wird auf Grundlage von Vorgangseigenschaften getroffen.

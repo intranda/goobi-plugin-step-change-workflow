@@ -3,6 +3,10 @@ title: Changing the workflow based on process properties
 identifier: intranda_step_changeWorkflow
 published: true
 description: This is the technical documentation for the Goobi plugin for automatically modifying workflows based on task properties.
+keywords:
+    - Goobi workflow
+    - Plugin
+    - Step Plugin
 ---
 ## Introduction
 This documentation describes the installation, configuration and use of a plugin for automatically changing workflows at runtime. The plugin can open, close or deactivate (depending on configuration) steps. User groups can be assigned and production templates can also be completely exchanged. The decision as to what exactly should happen in each case is made on the basis of process properties.
