@@ -9,7 +9,7 @@ keywords:
     - Step Plugin
 ---
 ## Einführung
-Die vorliegende Dokumentation beschreibt die Installation, Konfiguration und den Einsatz eines Plugins zum automatischen Ändern von Workflows zur Laufzeit. Das Plugin kann (je nach Konfiguration) Schritte öffnen, schließen oder deaktivieren. Benutzergruppen können zugwiesen werden und auch Produktionsvorlagen vollständig getauscht werden. Die Entscheidung, was jeweils genau geschehen soll, wird auf Grundlage von Vorgangseigenschaften getroffen.
+Die vorliegende Dokumentation beschreibt die Installation, Konfiguration und den Einsatz eines Plugins zum automatischen Ändern von Workflows zur Laufzeit. Das Plugin kann (je nach Konfiguration) Schritte öffnen, schließen oder deaktivieren. Benutzergruppen können zugewiesen werden und auch Produktionsvorlagen vollständig getauscht werden. Die Entscheidung, was jeweils genau geschehen soll, wird auf Grundlage von Vorgangseigenschaften getroffen.
 
 
 ## Installation
@@ -54,7 +54,7 @@ Weitere Erläuterungen über die Verwendung von Variablen finden sich hier:
 
 [https://docs.goobi.io/goobi-workflow/de/manager/07_variables](https://docs.goobi.io/goobi-workflow/de/manager/07_variables)
 
-Wenn eine Eigenschaft und der zu prüfende Wert benannt wurde, wird die Bedinung ausgewertet, die erfüllt sein muss, um das Plugin anzuwenden.
+Wenn eine Eigenschaft und der zu prüfende Wert benannt wurde, wird die Bedingung ausgewertet, die erfüllt sein muss, um das Plugin anzuwenden.
 
 ```xml
 <!-- name of the property or metadata to check: please take care to use the syntax of the Variable replacer here -->
@@ -69,8 +69,8 @@ Die Prüfung geht grundsätzlich davon aus, dass die zu prüfende Eigenschaft nu
 
 | Parameterwert | Erläuterung |
 | :--- | :--- |
-| `is`  | Der Inhalt der Eigenschaft enspricht exakt dem konfigurierten Wert. |
-| `not` | Der Inhalt der Eigenschaft enspricht nicht exakt dem konfigurierten Wert. |
+| `is`  | Der Inhalt der Eigenschaft entspricht exakt dem konfigurierten Wert. |
+| `not` | Der Inhalt der Eigenschaft entspricht nicht exakt dem konfigurierten Wert. |
 | `missing` | Die Eigenschaft ist nicht vorhanden. |
 | `available` | Eine Eigenschaft mit diesem Namen ist vorhanden, unabhängig von deren Inhalt. |
 
@@ -149,7 +149,7 @@ Abhängig von vorhandenen Eigenschaften lassen sich die zuständigen Benutzergru
 | Parameter | Erläuterung |
 | :--- | :--- |
 | `step` | Legen Sie fest, für welchen Arbeitsschritt Sie die Benutzergruppen eintragen möchten. |
-| `usergroup` | Definieren Sie hier den Namen der Benutztergruppe, die für den konfigurierten Schritt als zuständig eingetragen werden soll. |
+| `usergroup` | Definieren Sie hier den Namen der Benutzergruppe, die für den konfigurierten Schritt als zuständig eingetragen werden soll. |
 
 
 ### Ändern der Produktionsvorlage auf der der Vorgang basiert
