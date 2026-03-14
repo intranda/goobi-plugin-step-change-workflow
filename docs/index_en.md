@@ -52,7 +52,7 @@ In each `<change>` element it is then configured which process property is check
 
 Further explanations about the use of variables can be found here:
 
-[https://docs.goobi.io/goobi-workflow/en/manager/07_variables](https://docs.goobi.io/goobi-workflow/en/manager/07_variables)
+https://docs.goobi.io/en/workflow/manual/manager/variables
 
 If a property and the value to be checked have been named, the condition that must be fulfilled in order to apply the plugin is evaluated.
 

@@ -52,7 +52,7 @@ In jedem `<change>`-Element wird dann konfiguriert, welche Prozesseigenschaft ü
 
 Weitere Erläuterungen über die Verwendung von Variablen finden sich hier:
 
-[https://docs.goobi.io/goobi-workflow/de/manager/07_variables](https://docs.goobi.io/goobi-workflow/de/manager/07_variables)
+https://docs.goobi.io/de/workflow/manual/manager/variables
 
 Wenn eine Eigenschaft und der zu prüfende Wert benannt wurde, wird die Bedingung ausgewertet, die erfüllt sein muss, um das Plugin anzuwenden.
 
